@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Console Cyntia</title>
+<meta name="theme-color" content="#FBF7F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF7F1; --card:#FFFFFF; --ink:#1F2A37; --muted:#6B7280; --line:#EDE6DA;
+  --sage:#2E7D6B; --sage-soft:#DDEFE9; --coral:#F0745A; --coral-soft:#FDE4DD;
+  --sun:#F3B845; --sun-soft:#FCF0D2; --lav:#6C63C7; --lav-soft:#E8E6F8; --ok:#2E9E6B;
+  --r:16px; --sh:0 6px 24px rgba(31,42,55,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.45}
+a{color:var(--sage)}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:820px;margin:0 auto;padding:16px 16px 90px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 14px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,var(--sage),#5BB79F);display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;box-shadow:var(--sh)}
+h1{font-size:19px;margin:0;font-weight:800}
+.sub{font-size:12.5px;color:var(--muted);margin-top:-2px}
+.role{display:flex;background:#F1EBE1;border-radius:999px;padding:3px}
+.role button{padding:6px 12px;border-radius:999px;font-weight:700;font-size:13px;color:var(--muted)}
+.role button.on{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.status{font-size:11.5px;color:var(--muted);text-align:right;min-height:14px}
+.status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:middle}
+.status.err .dot{background:var(--coral)}
+.status.busy .dot{background:var(--sun)}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap;padding:9px 14px;border-radius:12px;font-weight:700;color:var(--muted);background:#F5F0E8;font-size:14px;position:relative}
+.tabs button.on{background:var(--sage);color:#fff}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--coral);color:#fff;font-size:11px;line-height:18px;margin-left:6px;text-align:center}
+.tabs button.on .badge{background:#fff;color:var(--sage)}
+
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card h2 small{font-weight:600;color:var(--muted);font-size:12.5px}
+.hint{color:var(--muted);font-size:13px}
+.empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:14px}
+.empty .big{font-size:34px;margin-bottom:6px}
+
+.sec{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 4px 8px}
+.sec.late{color:var(--coral)}
+
+.mission{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.mission:first-child{border-top:0;padding-top:4px}
+.chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid #CBD5D1;margin-top:2px;display:grid;place-items:center;transition:.15s;background:#fff}
+.chk:hover{border-color:var(--sage)}
+.mission.done .chk{background:var(--sage);border-color:var(--sage);color:#fff;font-size:14px;font-weight:800}
+.mbody{flex:1;min-width:0}
+.mtitle{font-weight:700;font-size:15px}
+.mission.done .mtitle{color:var(--muted);text-decoration:line-through}
+.mdet{color:var(--muted);font-size:13.5px;margin-top:3px;white-space:pre-wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#F3EFE7;color:var(--muted)}
+.chip.late{background:var(--coral-soft);color:#C2412A}
+.chip.today{background:var(--sun-soft);color:#9A6B00}
+.chip.soon{background:var(--sage-soft);color:var(--sage)}
+.chip.urg{background:var(--coral);color:#fff}
+.chip.calm{background:var(--lav-soft);color:var(--lav)}
+.chip.link{background:var(--lav-soft);color:var(--lav)}
+.chip a{color:inherit;text-decoration:none}
+.chip.time{background:#EEF6F3;color:var(--sage)}
+.mact{display:flex;gap:4px;flex:none}
+.icon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--muted);font-size:15px}
+.icon:hover{background:#F3EFE7;color:var(--ink)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:800;font-size:14.5px;background:var(--sage);color:#fff;transition:.15s}
+.btn:hover{filter:brightness(1.05)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sec2{background:#F1EBE1;color:var(--ink)}
+.btn.coral{background:var(--coral)}
+.btn.lav{background:var(--lav)}
+.btn.ghost{background:transparent;color:var(--muted);font-weight:700}
+.btn.full{width:100%}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}
+.fab{position:fixed;right:18px;bottom:22px;z-index:20;box-shadow:0 10px 30px rgba(46,125,107,.35);padding:14px 20px;border-radius:999px;font-size:15px}
+
+label.f{display:block;font-weight:700;font-size:13.5px;margin:12px 0 6px}
+.inp{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#FCFAF6;outline:none}
+.inp:focus{border-color:var(--sage);background:#fff}
+textarea.inp{min-height:84px;resize:vertical}
+.quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.quick button{padding:8px 13px;border-radius:999px;background:#F3EFE7;font-weight:700;font-size:13.5px;color:var(--ink)}
+.quick button.on{background:var(--sage);color:#fff}
+.quick.coral button.on{background:var(--coral)}
+.moods{display:flex;gap:8px;justify-content:space-between;margin-top:8px}
+.moods button{flex:1;padding:10px 0;border-radius:14px;background:#F3EFE7;font-size:26px;transition:.15s;border:2px solid transparent}
+.moods button.on{background:var(--sun-soft);border-color:var(--sun);transform:scale(1.06)}
+.moods.energy button{font-size:15px;font-weight:800;color:var(--muted)}
+.moods.energy button.on{background:var(--sage-soft);border-color:var(--sage);color:var(--sage)}
+
+.lauric{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:14px;background:var(--lav-soft);margin-top:12px;flex-wrap:wrap}
+.lauric .t{font-weight:800;color:var(--lav)}
+.lauric .d{font-size:12.5px;color:#5B55A8}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:14px;padding:8px 12px;border-radius:12px;background:#fff;color:var(--muted)}
+.toggle.on{background:var(--ok);color:#fff}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border-radius:14px;box-shadow:var(--sh);padding:14px}
+.kpi .v{font-size:24px;font-weight:800;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:700;margin-top:3px}
+.kpi.sage .v{color:var(--sage)} .kpi.coral .v{color:var(--coral)} .kpi.lav .v{color:var(--lav)} .kpi.sun .v{color:#B9841A}
+
+.day{border-top:1px solid var(--line);padding:12px 0}
+.day:first-child{border-top:0}
+.dhead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.dhead b{font-size:14.5px;text-transform:capitalize}
+.dmeta{display:flex;gap:6px;flex-wrap:wrap}
+.dlist{margin:8px 0 0;padding:0;list-style:none;font-size:13.5px}
+.dlist li{padding:3px 0;display:flex;justify-content:space-between;gap:8px}
+.dlist li span:last-child{color:var(--muted);white-space:nowrap}
+.dtext{margin-top:8px;font-size:13.5px;background:#FCFAF6;border-radius:10px;padding:8px 10px}
+.dtext b{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+
+.bars{display:flex;gap:10px;align-items:flex-end;height:150px;padding:10px 4px 0;overflow-x:auto}
+.bar{flex:1;min-width:52px;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bar .cols{display:flex;gap:4px;align-items:flex-end;width:100%;height:100%;justify-content:center}
+.bar .col{width:16px;border-radius:6px 6px 2px 2px;min-height:2px}
+.bar .col.est{background:#D9D2C5}
+.bar .col.real{background:var(--sage)}
+.bar .lbl{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);font-weight:700;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;white-space:nowrap}
+.pos{color:var(--coral);font-weight:800}.neg{color:var(--ok);font-weight:800}
+.moodline{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.moodline span{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:#F3EFE7}
+.moodline span small{display:none}
+.tablewrap{overflow-x:auto}
+
+.modal{position:fixed;inset:0;background:rgba(31,42,55,.45);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+.modal.on{display:flex}
+.sheet{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:560px;padding:18px 18px 26px;max-height:92vh;overflow:auto;animation:up .2s ease}
+@keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@media(min-width:640px){.modal{align-items:center;padding:20px}.sheet{border-radius:22px}}
+.sheet h3{margin:0 0 4px;font-size:18px;font-weight:800}
+.steps{display:flex;gap:5px;margin:8px 0 14px}
+.steps i{flex:1;height:5px;border-radius:3px;background:#EDE6DA}
+.steps i.on{background:var(--sage)}
+.row{display:flex;gap:8px;justify-content:space-between;margin-top:18px}
+.recap{background:#FCFAF6;border-radius:12px;padding:12px;font-size:13.5px}
+.recap div{padding:3px 0}
+.recap b{color:var(--muted);font-weight:700;display:inline-block;min-width:92px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 16px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;transition:.25s;z-index:60;pointer-events:none;max-width:92vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:#C2412A}
+.today-sum{display:flex;gap:10px;flex-wrap:wrap}
+.today-sum .pill{background:var(--sage-soft);color:var(--sage);font-weight:800;padding:8px 12px;border-radius:12px;font-size:13.5px}
+.hello{background:linear-gradient(135deg,#2E7D6B,#4FA98F);color:#fff;border-radius:var(--r);padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh)}
+.hello b{font-size:17px}
+.hello p{margin:4px 0 0;opacity:.92;font-size:13.5px}
+.hello.alex{background:linear-gradient(135deg,#6C63C7,#8F86E0)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{padding:7px 12px;border-radius:999px;background:#F1EBE1;font-weight:700;font-size:13px;color:var(--muted)}
+.filters button.on{background:var(--ink);color:#fff}
+.lock{max-width:380px;margin:40px auto;text-align:center}
+.lock .inp{text-align:center;font-size:20px;letter-spacing:.2em;margin:14px 0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">C</div>
+      <div><h1>Console Cyntia</h1><div class="sub" id="sub">missions · EOD · suivi</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="role"><button id="r-cyntia" onclick="setRole('cyntia')">Cyntia</button><button id="r-alex" onclick="setRole('alex')">Alex</button></div>
+      <div class="status" id="status"><span class="dot"></span><span id="status-t">chargement…</span></div>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"></main>
+</div>
+
+<button class="btn fab" id="fab" hidden onclick="openMissionForm()">＋ Nouvelle mission</button>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- config ----------
+const PONT = 'https://script.google.com/macros/s/AKfycbwbkBFu8QWWAL4eL_J-A4N942w_so8qFP0Cb_3v4LnX91FGmclkBjMVCMgEVCiaxYp2vQ/exec';
+const KEY = 'cyntia-ce6892b5a42b55849eb4460d';
+const LAURIC_EOD = 'https://alexyoucompte99-lang.github.io/console-prospection-lauric/#eod';
+const ALEX_CODE = 'alex26';
+const TIME_CHIPS = [15, 30, 45, 60, 90, 120, 180, 240];
+
+// ---------- état ----------
+let S = { missions: [], eods: [] };
+let role = localStorage.getItem('cc_role') || 'cyntia';
+let tab = (location.hash || '').replace('#', '');
+let alexOk = localStorage.getItem('cc_alex') === '1';
+let recapFilter = 'week';
+let busy = false;
+
+const TABS = {
+  cyntia: [['missions', 'Mes missions'], ['eod', 'Mon EOD'], ['histo', 'Mon historique']],
+  alex: [['pilotage', 'Missions'], ['recap', 'Récap'], ['data', 'Data']],
+};
+
+// ---------- utils ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+function isoDate(d = new Date()) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function isoNow() { const d = new Date(); return isoDate(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+const TODAY = () => isoDate();
+function addDays(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDate(d); }
+function fmtMin(n) { n = Number(n) || 0; if (!n) return '0 min'; const h = Math.floor(n / 60), m = n % 60; return h ? h + 'h' + (m ? pad(m) : '') : m + ' min'; }
+function fmtDate(iso, opts) { if (!iso) return ''; const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return d.toLocaleDateString('fr-FR', opts || { weekday: 'short', day: 'numeric', month: 'short' }); }
+function dayLabel(iso) {
+  const t = TODAY(); if (iso === t) return "aujourd'hui"; if (iso === addDays(t, -1)) return 'hier'; if (iso === addDays(t, 1)) return 'demain';
+  return fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function deadlineChip(m) {
+  if (!m.deadline) return '<span class="chip">Pas de deadline</span>';
+  const d = String(m.deadline).slice(0, 10), t = TODAY();
+  if (m.status === 'done') return `<span class="chip">Pour le ${fmtDate(d)}</span>`;
+  if (d < t) { const n = Math.round((new Date(t) - new Date(d)) / 864e5); return `<span class="chip late">⏰ En retard de ${n} j</span>`; }
+  if (d === t) return '<span class="chip today">🔥 Aujourd\'hui</span>';
+  if (d === addDays(t, 1)) return '<span class="chip soon">Demain</span>';
+  return `<span class="chip soon">${fmtDate(d)}</span>`;
+}
+function prioChip(p) { if (p === 'urgente') return '<span class="chip urg">Urgente</span>'; if (p === 'calme') return '<span class="chip calm">Quand tu peux</span>'; return ''; }
+function linkChip(m) { return m.link ? `<span class="chip link"><a href="${esc(m.link)}" target="_blank" rel="noopener">🔗 Voir le lien</a></span>` : ''; }
+const MOODS = ['', '😞', '😕', '😐', '🙂', '😄'];
+const MOOD_TXT = ['', 'Dure journée', 'Bof', 'Ça va', 'Bien', 'Super'];
+function weekStart(iso) { const d = new Date(iso + 'T12:00:00'); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return isoDate(d); }
+function sortTodo(a, b) { const da = a.deadline || '9999', db = b.deadline || '9999'; if (da !== db) return da < db ? -1 : 1; const pa = a.priority === 'urgente' ? 0 : 1, pb = b.priority === 'urgente' ? 0 : 1; return pa - pb; }
+
+function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'toast on' + (err ? ' err' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = 'toast', 2600); }
+function setStatus(txt, cls) { $('#status').className = 'status ' + (cls || ''); $('#status-t').textContent = txt; }
+
+// ---------- pont ----------
+async function load(silent) {
+  if (!silent) setStatus('chargement…', 'busy');
+  try {
+    const r = await fetch(`${PONT}?key=${KEY}&what=state&_=${Date.now()}`, { cache: 'no-store' });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'réponse pont');
+    S.missions = (j.missions || []).map(norm); S.eods = j.eods || [];
+    localStorage.setItem('cc_cache', JSON.stringify(S));
+    setStatus('en direct · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+  } catch (e) {
+    const c = localStorage.getItem('cc_cache');
+    if (c) { try { S = JSON.parse(c); } catch (_) { } }
+    setStatus('hors ligne · copie locale', 'err');
+  }
+  render();
+}
+function norm(m) { m.est_min = Number(m.est_min) || 0; m.actual_min = Number(m.actual_min) || 0; m.deadline = m.deadline ? String(m.deadline).slice(0, 10) : ''; return m; }
+async function post(payload) {
+  const r = await fetch(PONT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: KEY, ...payload }) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'erreur pont');
+  return j;
+}
+
+// ---------- rôle / onglets ----------
+function setRole(r) {
+  if (r === 'alex' && !alexOk) { role = 'alex'; renderLock(); return; }
+  role = r; localStorage.setItem('cc_role', r);
+  tab = TABS[r][0][0]; location.hash = tab; render();
+}
+function renderLock() {
+  $('#r-cyntia').classList.remove('on'); $('#r-alex').classList.add('on');
+  $('#tabs').innerHTML = ''; $('#fab').hidden = true;
+  $('#main').innerHTML = `<div class="card lock"><div style="font-size:34px">🔒</div><h2 style="justify-content:center">Vue Alex</h2>
+    <p class="hint">Entre ton code pour accéder au pilotage.</p>
+    <input class="inp" id="code" type="password" inputmode="text" autocomplete="off" placeholder="code">
+    <button class="btn full lav" onclick="checkCode()">Entrer</button>
+    <p><button class="btn ghost" onclick="setRole('cyntia')">← Retour vue Cyntia</button></p></div>`;
+  $('#code').focus(); $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+}
+function checkCode() {
+  if ($('#code').value.trim().toLowerCase() === ALEX_CODE) { alexOk = true; localStorage.setItem('cc_alex', '1'); setRole('alex'); }
+  else { toast('Code incorrect', true); $('#code').value = ''; }
+}
+function showTab(t) { tab = t; location.hash = t; render(); }
+
+function render() {
+  if (role === 'alex' && !alexOk) return renderLock();
+  const tabs = TABS[role];
+  if (!tabs.some(x => x[0] === tab)) tab = tabs[0][0];
+  $('#r-cyntia').classList.toggle('on', role === 'cyntia'); $('#r-alex').classList.toggle('on', role === 'alex');
+  $('#sub').textContent = role === 'alex' ? 'vue pilotage' : 'missions · EOD · suivi';
+  const todo = S.missions.filter(m => m.status !== 'done');
+  const late = todo.filter(m => m.deadline && m.deadline < TODAY()).length;
+  const eodToday = S.eods.some(e => String(e.date).slice(0, 10) === TODAY());
+  $('#tabs').innerHTML = tabs.map(([id, lbl]) => {
+    let b = '';
+    if (id === 'missions' || id === 'pilotage') b = todo.length ? `<span class="badge">${todo.length}</span>` : '';
+    if (id === 'eod' && !eodToday) b = '<span class="badge">!</span>';
+    if (id === 'pilotage' && late) b = `<span class="badge">${late} ⏰</span>`;
+    return `<button class="${id === tab ? 'on' : ''}" onclick="showTab('${id}')">${lbl}${b}</button>`;
+  }).join('');
+  $('#fab').hidden = !(role === 'alex' && tab === 'pilotage');
+  const V = { missions: vMissions, eod: vEod, histo: vHisto, pilotage: vPilotage, recap: vRecap, data: vData };
+  $('#main').innerHTML = V[tab]();
+}
+
+// ================= VUE CYNTIA =================
+function missionRow(m, forAlex) {
+  const done = m.status === 'done';
+  const chips = [deadlineChip(m), m.est_min ? `<span class="chip time">~ ${fmtMin(m.est_min)}</span>` : '', done && m.actual_min ? `<span class="chip time">✔ ${fmtMin(m.actual_min)} réel</span>` : '', prioChip(m.priority), linkChip(m)].join('');
+  const act = forAlex
+    ? `<div class="mact"><button class="icon" title="Modifier" onclick="openMissionForm('${m.id}')">✎</button><button class="icon" title="Supprimer" onclick="delMission('${m.id}')">🗑</button></div>`
+    : '';
+  return `<div class="mission ${done ? 'done' : ''}">
+    <button class="chk" onclick="${done ? `undoDone('${m.id}')` : `openDone('${m.id}')`}" title="${done ? 'Annuler' : 'Marquer comme faite'}">${done ? '✓' : ''}</button>
+    <div class="mbody"><div class="mtitle">${esc(m.title)}</div>${m.details ? `<div class="mdet">${esc(m.details)}</div>` : ''}
+      ${done && m.note ? `<div class="mdet">💬 ${esc(m.note)}</div>` : ''}<div class="chips">${chips}</div></div>${act}</div>`;
+}
+
+function vMissions() {
+  const todo = S.missions.filter(m => m.status !== 'done').sort(sortTodo);
+  const late = todo.filter(m => m.deadline && m.deadline < TODAY());
+  const rest = todo.filter(m => !late.includes(m));
+  const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === TODAY());
+  const tot = doneToday.reduce((s, m) => s + m.actual_min, 0);
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'Bonjour Cyntia ☀️' : h < 18 ? 'Bon après-midi Cyntia 🌿' : 'Bonsoir Cyntia 🌙';
+  let html = `<div class="hello"><b>${hello}</b><p>${todo.length ? `${todo.length} mission${todo.length > 1 ? 's' : ''} à faire${late.length ? `, dont ${late.length} en retard` : ''}.` : 'Tout est fait, bravo ! 🎉'}${doneToday.length ? ` Aujourd'hui : ${doneToday.length} faite${doneToday.length > 1 ? 's' : ''} (${fmtMin(tot)}).` : ''}</p></div>`;
+  if (!todo.length && !doneToday.length) html += `<div class="card"><div class="empty"><div class="big">🌤️</div>Aucune mission pour le moment.<br>Alex t'en ajoutera bientôt.</div></div>`;
+  if (late.length) html += `<div class="sec late">⏰ En retard</div><div class="card">${late.map(m => missionRow(m)).join('')}</div>`;
+  if (rest.length) html += `<div class="sec">À faire</div><div class="card">${rest.map(m => missionRow(m)).join('')}</div>`;
+  if (doneToday.length) html += `<div class="sec">Faites aujourd'hui</div><div class="card">${doneToday.map(m => missionRow(m)).join('')}</div>`;
+  return html;
+}
+
+function openDone(id) {
+  const m = S.missions.find(x => x.id === id); if (!m) return;
+  openModal(`<h3>Bravo ! 🎉</h3><p class="hint" style="margin:0 0 6px">« ${esc(m.title)} »${m.est_min ? ` · estimée à ${fmtMin(m.est_min)}` : ''}</p>
+    <label class="f">Combien de temps ça t'a pris ?</label>
+    <div class="quick" id="q-time">${TIME_CHIPS.map(t => `<button onclick="pickTime(${t})">${fmtMin(t)}</button>`).join('')}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><input class="inp" id="d-min" type="number" min="1" inputmode="numeric" placeholder="ou en minutes" style="max-width:170px"><span class="hint">minutes</span></div>
+    <label class="f">Un commentaire pour Alex ? <small class="hint">(optionnel)</small></label>
+    <textarea class="inp" id="d-note" placeholder="Ex : fait, mais j'ai eu un souci avec…"></textarea>
+    <div class="row"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn" onclick="confirmDone('${id}')">Valider ✓</button></div>`);
+  $('#d-min').addEventListener('input', () => document.querySelectorAll('#q-time button').forEach(b => b.classList.remove('on')));
+}
+function pickTime(t) { document.querySelectorAll('#q-time button').forEach(b => b.classList.toggle('on', b.textContent === fmtMin(t))); $('#d-min').value = t; }
+async function confirmDone(id) {
+  const min = Number($('#d-min').value); if (!min) { toast('Indique le temps passé', true); return; }
+  const note = $('#d-note').value.trim();
+  const m = S.missions.find(x => x.id === id);
+  const fields = { status: 'done', done_at: isoNow(), actual_min: min, note };
+  Object.assign(m, fields); closeModal(); render(); toast('Mission validée ✓');
+  try { await post({ what: 'mission_update', id, fields }); load(true); } catch (e) { toast('Pas enregistré : ' + e.message, true); }
+}
+async function undoDone(id) {
+  const m = S.missions.find(x => x.id === id); if (!m) return;
+  if (!confirm('Remettre cette mission dans « à faire » ?')) return;
+  const fields = { status: 'todo', done_at: '', actual_min: '', note: '' };
+  Object.assign(m, { status: 'todo', done_at: '', actual_min: 0, note: '' }); render();
+  try { await post({ what: 'mission_update', id, fields }); load(true); } catch (e) { toast('Pas enregistré : ' + e.message, true); }
+}
+
+function vEod() {
+  const t = TODAY();
+  const ex = S.eods.find(e => String(e.date).slice(0, 10) === t);
+  const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === t);
+  const tot = doneToday.reduce((s, m) => s + m.actual_min, 0);
+  const mood = Number(ex?.mood) || 0, energy = Number(ex?.energy) || 0, lauric = ex ? String(ex.lauric_done).toUpperCase() === 'OUI' : false;
+  return `<div class="card"><h2>Ma journée <small>${fmtDate(t, { weekday: 'long', day: 'numeric', month: 'long' })}</small></h2>
+    <div class="today-sum"><span class="pill">✅ ${doneToday.length} mission${doneToday.length > 1 ? 's' : ''}</span><span class="pill">⏱ ${fmtMin(tot)}</span></div>
+    ${doneToday.length ? `<ul class="dlist">${doneToday.map(m => `<li><span>${esc(m.title)}</span><span>${fmtMin(m.actual_min)}</span></li>`).join('')}</ul>` : '<p class="hint" style="margin:10px 0 0">Coche tes missions dans l\'onglet « Mes missions », elles apparaîtront ici.</p>'}
+  </div>
+  <div class="card">
+    <h2>${ex ? 'Mon EOD (déjà envoyé, tu peux le modifier)' : 'Mon EOD du jour'}</h2>
+    <label class="f">Comment tu t'es sentie aujourd'hui ?</label>
+    <div class="moods" id="q-mood">${[1, 2, 3, 4, 5].map(i => `<button class="${mood === i ? 'on' : ''}" data-v="${i}" onclick="pick('q-mood',${i})" title="${MOOD_TXT[i]}">${MOODS[i]}</button>`).join('')}</div>
+    <div class="hint" id="mood-txt" style="text-align:center;margin-top:6px;font-weight:700">${mood ? MOOD_TXT[mood] : '&nbsp;'}</div>
+    <label class="f">Ton niveau d'énergie</label>
+    <div class="moods energy" id="q-energy">${[1, 2, 3, 4, 5].map(i => `<button class="${energy === i ? 'on' : ''}" data-v="${i}" onclick="pick('q-energy',${i})">${i}</button>`).join('')}</div>
+    <label class="f">Ce qui a bien marché aujourd'hui</label>
+    <textarea class="inp" id="e-good" placeholder="Ce dont tu es contente, ce que tu as appris…">${esc(ex?.good || '')}</textarea>
+    <label class="f">Difficultés, blocages, besoins</label>
+    <textarea class="inp" id="e-hard" placeholder="Ce qui a coincé, ce dont tu as besoin d'Alex…">${esc(ex?.hard || '')}</textarea>
+    <div class="lauric"><div><div class="t">📋 EOD de Lauric</div><div class="d">À remplir chaque jour dans la console de Lauric.</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a class="btn sm lav" href="${LAURIC_EOD}" target="_blank" rel="noopener">Ouvrir ↗</a>
+      <button class="toggle ${lauric ? 'on' : ''}" id="t-lauric" onclick="this.classList.toggle('on')">${lauric ? '✅ Fait' : '☐ C\'est fait'}</button></div></div>
+    <div class="row" style="margin-top:18px"><span></span><button class="btn" id="e-send" onclick="sendEod()">${ex ? 'Mettre à jour mon EOD' : 'Envoyer mon EOD à Alex 🚀'}</button></div>
+  </div>`;
+}
+function pick(gid, v) {
+  document.querySelectorAll('#' + gid + ' button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === v));
+  if (gid === 'q-mood') $('#mood-txt').textContent = MOOD_TXT[v];
+}
+function picked(gid) { const b = document.querySelector('#' + gid + ' button.on'); return b ? Number(b.dataset.v) : 0; }
+async function sendEod() {
+  const mood = picked('q-mood'), energy = picked('q-energy');
+  if (!mood) { toast('Choisis ton humeur du jour', true); return; }
+  if (!energy) { toast('Indique ton niveau d\'énergie', true); return; }
+  const lauric_done = $('#t-lauric').classList.contains('on');
+  const p = { what: 'eod_submit', date: TODAY(), mood, energy, good: $('#e-good').value.trim(), hard: $('#e-hard').value.trim(), lauric_done };
+  const btn = $('#e-send'); btn.disabled = true; btn.textContent = 'Envoi…';
+  try {
+    const j = await post(p);
+    toast(j.tg ? 'EOD envoyé, Alex est prévenu ✅' : 'EOD enregistré ✅');
+    await load(true);
+  } catch (e) { toast('Échec : ' + e.message, true); btn.disabled = false; btn.textContent = 'Réessayer'; }
+}
+
+function vHisto() {
+  const days = dayIndex();
+  const keys = Object.keys(days).sort().reverse().filter(k => k !== TODAY()).slice(0, 30);
+  if (!keys.length) return `<div class="card"><div class="empty"><div class="big">📖</div>Ton historique se remplira au fil des jours.</div></div>`;
+  const doneAll = S.missions.filter(m => m.status === 'done');
+  const tot = doneAll.reduce((s, m) => s + m.actual_min, 0);
+  return `<div class="kpis"><div class="kpi sage"><div class="v">${doneAll.length}</div><div class="l">missions faites au total</div></div><div class="kpi lav"><div class="v">${fmtMin(tot)}</div><div class="l">de travail tracké</div></div><div class="kpi sun"><div class="v">${S.eods.length}</div><div class="l">EOD envoyés</div></div></div>
+    <div class="card">${keys.map(k => dayBlock(k, days[k], false)).join('')}</div>`;
+}
+
+// ================= VUE ALEX =================
+function vPilotage() {
+  const todo = S.missions.filter(m => m.status !== 'done').sort(sortTodo);
+  const late = todo.filter(m => m.deadline && m.deadline < TODAY());
+  const rest = todo.filter(m => !late.includes(m));
+  const done = S.missions.filter(m => m.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
+  const estLeft = todo.reduce((s, m) => s + m.est_min, 0);
+  const eodToday = S.eods.find(e => String(e.date).slice(0, 10) === TODAY());
+  let html = `<div class="hello alex"><b>Pilotage</b><p>${todo.length} mission${todo.length > 1 ? 's' : ''} en cours (~${fmtMin(estLeft)} estimées)${late.length ? ` · <b>${late.length} en retard</b>` : ''} · EOD du jour : ${eodToday ? `reçu ${MOODS[eodToday.mood] || ''}` : 'pas encore'}</p></div>`;
+  if (!S.missions.length) html += `<div class="card"><div class="empty"><div class="big">🗒️</div>Aucune mission. Clique sur « Nouvelle mission » pour commencer.</div></div>`;
+  if (late.length) html += `<div class="sec late">⏰ En retard</div><div class="card">${late.map(m => missionRow(m, true)).join('')}</div>`;
+  if (rest.length) html += `<div class="sec">À faire</div><div class="card">${rest.map(m => missionRow(m, true)).join('')}</div>`;
+  if (done.length) html += `<div class="sec">Faites (${done.length})</div><div class="card">${done.slice(0, 15).map(m => missionRow(m, true)).join('')}${done.length > 15 ? `<p class="hint" style="text-align:center;margin:10px 0 0">… et ${done.length - 15} autres dans Récap / Data</p>` : ''}</div>`;
+  return html;
+}
+
+// ----- questionnaire nouvelle mission -----
+let F = null;
+function openMissionForm(id) {
+  const m = id ? S.missions.find(x => x.id === id) : null;
+  F = { id: id || null, step: 1, title: m?.title || '', details: m?.details || '', deadline: m?.deadline || '', est_min: m?.est_min || 0, link: m?.link || '', priority: m?.priority || 'normale' };
+  renderForm();
+}
+function renderForm() {
+  const t = TODAY(); const dow = (new Date(t + 'T12:00:00').getDay() + 6) % 7; const fri = addDays(t, (4 - dow + 7) % 7); const nextFri = addDays(fri, 7);
+  const steps = `<div class="steps">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= F.step ? 'on' : ''}"></i>`).join('')}</div>`;
+  let body = '';
+  if (F.step === 1) body = `<h3>${F.id ? 'Modifier la mission' : 'C\'est quoi la mission ?'}</h3>${steps}
+    <label class="f">Titre</label><input class="inp" id="f-title" value="${esc(F.title)}" placeholder="Ex : Relancer les leads Tally de la semaine">
+    <label class="f">Détails <small class="hint">(ce qu'elle doit faire exactement, optionnel)</small></label><textarea class="inp" id="f-details" placeholder="Étapes, contexte, résultat attendu…">${esc(F.details)}</textarea>`;
+  if (F.step === 2) body = `<h3>Pour quand ?</h3>${steps}
+    <div class="quick" id="q-dl">${[['Aujourd\'hui', t], ['Demain', addDays(t, 1)], ['Cette semaine', fri], ['Semaine pro', nextFri], ['Pas de deadline', '']].map(([l, v]) => `<button class="${F.deadline === v ? 'on' : ''}" onclick="F.deadline='${v}';renderForm()">${l}</button>`).join('')}</div>
+    <label class="f">Ou une date précise</label><input class="inp" type="date" id="f-dl" value="${F.deadline}" onchange="F.deadline=this.value;renderForm()">`;
+  if (F.step === 3) body = `<h3>Combien de temps ça devrait prendre ?</h3>${steps}<p class="hint">Ton estimation : on la comparera au temps réel de Cyntia.</p>
+    <div class="quick" id="q-est">${TIME_CHIPS.map(v => `<button class="${F.est_min === v ? 'on' : ''}" onclick="F.est_min=${v};renderForm()">${fmtMin(v)}</button>`).join('')}</div>
+    <label class="f">Ou en minutes</label><input class="inp" type="number" min="1" inputmode="numeric" id="f-est" value="${F.est_min && !TIME_CHIPS.includes(F.est_min) ? F.est_min : ''}" placeholder="Ex : 75" oninput="F.est_min=Number(this.value)||0;document.querySelectorAll('#q-est button').forEach(b=>b.classList.remove('on'))" style="max-width:180px">`;
+  if (F.step === 4) body = `<h3>Un lien pour l'aider ?</h3>${steps}<p class="hint">Doc, Loom, Sheet, page… pour qu'elle comprenne bien ce qu'elle doit faire. Optionnel.</p>
+    <input class="inp" id="f-link" type="url" value="${esc(F.link)}" placeholder="https://…">`;
+  if (F.step === 5) body = `<h3>Priorité et récap</h3>${steps}
+    <div class="quick coral">${[['normale', 'Normale'], ['urgente', '🔥 Urgente'], ['calme', 'Quand elle peut']].map(([v, l]) => `<button class="${F.priority === v ? 'on' : ''}" onclick="F.priority='${v}';renderForm()">${l}</button>`).join('')}</div>
+    <div class="recap" style="margin-top:14px"><div><b>Mission</b> ${esc(F.title)}</div>${F.details ? `<div><b>Détails</b> ${esc(F.details)}</div>` : ''}<div><b>Deadline</b> ${F.deadline ? fmtDate(F.deadline, { weekday: 'long', day: 'numeric', month: 'long' }) : 'aucune'}</div><div><b>Estimé</b> ${F.est_min ? fmtMin(F.est_min) : 'non précisé'}</div><div><b>Lien</b> ${F.link ? esc(F.link) : 'aucun'}</div></div>`;
+  const last = F.step === 5;
+  openModal(body + `<div class="row"><button class="btn ghost" onclick="${F.step === 1 ? 'closeModal()' : 'formPrev()'}">${F.step === 1 ? 'Annuler' : '← Retour'}</button>
+    <button class="btn ${last ? 'coral' : ''}" onclick="${last ? 'saveMission()' : 'formNext()'}">${last ? (F.id ? 'Enregistrer' : 'Ajouter la mission ✓') : 'Suivant →'}</button></div>`);
+  const first = $('#f-title'); if (first) first.focus();
+}
+function grab() { if ($('#f-title')) { F.title = $('#f-title').value.trim(); F.details = $('#f-details').value.trim(); } if ($('#f-link')) F.link = $('#f-link').value.trim(); if ($('#f-est') && $('#f-est').value) F.est_min = Number($('#f-est').value) || F.est_min; }
+function formNext() { grab(); if (F.step === 1 && !F.title) { toast('Donne un titre à la mission', true); return; } F.step++; renderForm(); }
+function formPrev() { grab(); F.step--; renderForm(); }
+async function saveMission() {
+  grab();
+  const p = { title: F.title, details: F.details, link: F.link, deadline: F.deadline, est_min: F.est_min, priority: F.priority };
+  closeModal();
+  try {
+    if (F.id) { await post({ what: 'mission_update', id: F.id, fields: p }); toast('Mission modifiée ✓'); }
+    else { S.missions.push(norm({ ...p, id: 'tmp' + Date.now(), status: 'todo', created: isoNow() })); render(); await post({ what: 'mission_add', ...p }); toast('Mission ajoutée ✓'); }
+    load(true);
+  } catch (e) { toast('Échec : ' + e.message, true); load(true); }
+}
+async function delMission(id) {
+  const m = S.missions.find(x => x.id === id); if (!m) return;
+  if (!confirm(`Supprimer « ${m.title} » ?`)) return;
+  S.missions = S.missions.filter(x => x.id !== id); render();
+  try { await post({ what: 'mission_delete', id }); toast('Supprimée'); load(true); } catch (e) { toast('Échec : ' + e.message, true); load(true); }
+}
+
+// ----- récap -----
+function dayIndex() {
+  const days = {};
+  S.missions.filter(m => m.status === 'done' && m.done_at).forEach(m => { const k = String(m.done_at).slice(0, 10); (days[k] = days[k] || { missions: [], eod: null }).missions.push(m); });
+  S.eods.forEach(e => { const k = String(e.date).slice(0, 10); (days[k] = days[k] || { missions: [], eod: null }).eod = e; });
+  return days;
+}
+function dayBlock(k, d, forAlex) {
+  const e = d.eod; const tot = d.missions.reduce((s, m) => s + m.actual_min, 0); const est = d.missions.reduce((s, m) => s + m.est_min, 0);
+  const lauric = e ? (String(e.lauric_done).toUpperCase() === 'OUI') : null;
+  return `<div class="day"><div class="dhead"><b>${dayLabel(k)}</b><div class="dmeta">
+      ${e ? `<span class="chip today">${MOODS[e.mood] || ''} ${MOOD_TXT[e.mood] || ''}</span><span class="chip">⚡ ${e.energy}/5</span>` : (forAlex ? '<span class="chip late">EOD manquant</span>' : '<span class="chip">EOD non rempli</span>')}
+      ${e ? `<span class="chip ${lauric ? 'soon' : 'late'}">EOD Lauric ${lauric ? '✓' : '✗'}</span>` : ''}
+      <span class="chip time">${d.missions.length} mission${d.missions.length > 1 ? 's' : ''} · ${fmtMin(tot)}${est ? ` / ~${fmtMin(est)}` : ''}</span></div></div>
+    ${d.missions.length ? `<ul class="dlist">${d.missions.map(m => `<li><span>✅ ${esc(m.title)}${m.note ? ` <span class="hint">· ${esc(m.note)}</span>` : ''}</span><span>${fmtMin(m.actual_min)}${m.est_min ? ` <span class="hint">(~${fmtMin(m.est_min)})</span>` : ''}</span></li>`).join('')}</ul>` : ''}
+    ${e?.good ? `<div class="dtext"><b>👍 Bien marché</b><br>${esc(e.good)}</div>` : ''}${e?.hard ? `<div class="dtext"><b>⚠️ Difficultés</b><br>${esc(e.hard)}</div>` : ''}</div>`;
+}
+function rangeKeys() {
+  const t = TODAY(); const ws = weekStart(t);
+  if (recapFilter === 'week') return [ws, t];
+  if (recapFilter === 'lastweek') return [addDays(ws, -7), addDays(ws, -1)];
+  if (recapFilter === '30') return [addDays(t, -29), t];
+  return ['0000', '9999'];
+}
+function vRecap() {
+  const days = dayIndex(); const [a, b] = rangeKeys();
+  const keys = Object.keys(days).filter(k => k >= a && k <= b).sort().reverse();
+  const ms = keys.flatMap(k => days[k].missions); const es = keys.map(k => days[k].eod).filter(Boolean);
+  const tot = ms.reduce((s, m) => s + m.actual_min, 0), est = ms.filter(m => m.est_min).reduce((s, m) => s + m.est_min, 0), realEst = ms.filter(m => m.est_min).reduce((s, m) => s + m.actual_min, 0);
+  const ecart = est ? Math.round((realEst - est) / est * 100) : null;
+  const mood = es.length ? (es.reduce((s, e) => s + Number(e.mood || 0), 0) / es.length) : 0;
+  const lauric = es.filter(e => String(e.lauric_done).toUpperCase() === 'OUI').length;
+  const ontime = ms.filter(m => m.deadline).length ? Math.round(ms.filter(m => m.deadline && String(m.done_at).slice(0, 10) <= m.deadline).length / ms.filter(m => m.deadline).length * 100) : null;
+  const filt = [['week', 'Cette semaine'], ['lastweek', 'Semaine dernière'], ['30', '30 jours'], ['all', 'Tout']].map(([v, l]) => `<button class="${recapFilter === v ? 'on' : ''}" onclick="recapFilter='${v}';render()">${l}</button>`).join('');
+  return `<div class="filters">${filt}</div>
+  <div class="kpis">
+    <div class="kpi sage"><div class="v">${ms.length}</div><div class="l">missions faites</div></div>
+    <div class="kpi lav"><div class="v">${fmtMin(tot)}</div><div class="l">temps réel total</div></div>
+    <div class="kpi ${ecart === null ? '' : ecart > 10 ? 'coral' : 'sage'}"><div class="v">${ecart === null ? '–' : (ecart > 0 ? '+' : '') + ecart + ' %'}</div><div class="l">réel vs estimé</div></div>
+    <div class="kpi sun"><div class="v">${mood ? mood.toFixed(1) + '/5 ' + MOODS[Math.round(mood)] : '–'}</div><div class="l">humeur moyenne</div></div>
+    <div class="kpi ${ontime !== null && ontime < 70 ? 'coral' : 'sage'}"><div class="v">${ontime === null ? '–' : ontime + ' %'}</div><div class="l">rendues dans les délais</div></div>
+    <div class="kpi lav"><div class="v">${lauric}/${es.length}</div><div class="l">EOD Lauric faits</div></div>
+  </div>
+  <div class="card">${keys.length ? keys.map(k => dayBlock(k, days[k], true)).join('') : '<div class="empty"><div class="big">📭</div>Rien sur cette période.</div>'}</div>`;
+}
+
+// ----- data -----
+function vData() {
+  const done = S.missions.filter(m => m.status === 'done' && m.done_at);
+  if (!done.length && !S.eods.length) return `<div class="card"><div class="empty"><div class="big">📊</div>Les graphiques apparaîtront dès les premières missions cochées.</div></div>`;
+  const weeks = {};
+  done.forEach(m => { const w = weekStart(String(m.done_at).slice(0, 10)); (weeks[w] = weeks[w] || { real: 0, est: 0, n: 0 }); weeks[w].real += m.actual_min; weeks[w].est += m.est_min; weeks[w].n++; });
+  const wk = Object.keys(weeks).sort().slice(-8); const max = Math.max(1, ...wk.flatMap(w => [weeks[w].real, weeks[w].est]));
+  const bars = wk.map(w => `<div class="bar"><div class="cols" title="réel ${fmtMin(weeks[w].real)} / estimé ${fmtMin(weeks[w].est)}"><div class="col est" style="height:${Math.round(weeks[w].est / max * 100)}%"></div><div class="col real" style="height:${Math.round(weeks[w].real / max * 100)}%"></div></div><div class="lbl">${fmtDate(w, { day: 'numeric', month: 'short' })}</div><div class="lbl" style="color:var(--sage)">${fmtMin(weeks[w].real)}</div></div>`).join('');
+  const eods = [...S.eods].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-21);
+  const moodline = eods.map(e => `<span title="${fmtDate(e.date)} · humeur ${e.mood}/5 · énergie ${e.energy}/5">${MOODS[e.mood] || '·'}</span>`).join('');
+  const rows = [...done].sort((a, b) => String(b.done_at).localeCompare(String(a.done_at))).slice(0, 60).map(m => {
+    const diff = m.est_min ? m.actual_min - m.est_min : null; const late = m.deadline && String(m.done_at).slice(0, 10) > m.deadline;
+    return `<tr><td>${esc(m.title)}<div class="hint">${fmtDate(String(m.done_at).slice(0, 10))}${late ? ' · <span style="color:var(--coral);font-weight:700">en retard</span>' : ''}</div></td><td class="num">${m.est_min ? fmtMin(m.est_min) : '–'}</td><td class="num">${fmtMin(m.actual_min)}</td><td class="num">${diff === null ? '–' : `<span class="${diff > 0 ? 'pos' : 'neg'}">${diff > 0 ? '+' : ''}${diff} min</span>`}</td></tr>`;
+  }).join('');
+  const withEst = done.filter(m => m.est_min); const acc = withEst.length ? Math.round(withEst.reduce((s, m) => s + Math.abs(m.actual_min - m.est_min) / m.est_min, 0) / withEst.length * 100) : null;
+  return `<div class="kpis"><div class="kpi sage"><div class="v">${done.length}</div><div class="l">missions faites</div></div><div class="kpi lav"><div class="v">${fmtMin(done.reduce((s, m) => s + m.actual_min, 0))}</div><div class="l">temps total tracké</div></div><div class="kpi sun"><div class="v">${acc === null ? '–' : '±' + acc + ' %'}</div><div class="l">écart moyen d'estimation</div></div></div>
+  <div class="card"><h2>Temps par semaine <small>réel vs estimé</small></h2>${wk.length ? `<div class="bars">${bars}</div><div class="legend"><span><i style="background:#D9D2C5"></i>estimé</span><span><i style="background:var(--sage)"></i>réel</span></div>` : '<p class="hint">Pas encore de données.</p>'}</div>
+  <div class="card"><h2>Humeur <small>${eods.length} derniers EOD</small></h2>${eods.length ? `<div class="moodline">${moodline}</div>` : '<p class="hint">Pas encore d\'EOD.</p>'}</div>
+  <div class="card"><h2>Détail des missions</h2><div class="tablewrap"><table><thead><tr><th>Mission</th><th class="num">Estimé</th><th class="num">Réel</th><th class="num">Écart</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="hint">Aucune mission faite.</td></tr>'}</tbody></table></div></div>`;
+}
+
+// ---------- modal ----------
+function openModal(html) { $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal() { $('#modal').classList.remove('on'); }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ---------- boot ----------
+if (new URLSearchParams(location.search).get('vue') === 'alex') role = 'alex';
+addEventListener('hashchange', () => { const t = (location.hash || '').replace('#', ''); if (t && t !== tab) { tab = t; render(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+setInterval(() => { if (!document.hidden) load(true); }, 120000);
+render(); load();
+</script>
+</body>
+</html>
