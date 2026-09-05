@@ -282,10 +282,10 @@ function renderLock() {
   $('#tabs').innerHTML = ''; $('#fab').hidden = true;
   $('#main').innerHTML = `<div class="card lock"><div style="font-size:34px">🔒</div><h2 style="justify-content:center">Vue Alex</h2>
     <p class="hint">Entre ton code pour accéder au pilotage.</p>
-    <input class="inp" id="code" type="password" inputmode="text" autocomplete="off" placeholder="code">
-    <button class="btn full lav" onclick="checkCode()">Entrer</button>
+    <form onsubmit="event.preventDefault();checkCode()"><input class="inp" id="code" type="password" inputmode="text" autocomplete="off" placeholder="code">
+    <button class="btn full lav" type="submit">Entrer</button></form>
     <p><button class="btn ghost" onclick="setRole('cyntia')">← Retour vue Cyntia</button></p></div>`;
-  $('#code').focus(); $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+  $('#code').focus();
 }
 function checkCode() {
   if ($('#code').value.trim().toLowerCase() === ALEX_CODE) { alexOk = true; localStorage.setItem('cc_alex', '1'); setRole('alex'); }
@@ -471,7 +471,7 @@ function renderForm() {
   const last = F.step === 5;
   openModal(body + `<div class="row"><button class="btn ghost" onclick="${F.step === 1 ? 'closeModal()' : 'formPrev()'}">${F.step === 1 ? 'Annuler' : '← Retour'}</button>
     <button class="btn ${last ? 'coral' : ''}" onclick="${last ? 'saveMission()' : 'formNext()'}">${last ? (F.id ? 'Enregistrer' : 'Ajouter la mission ✓') : 'Suivant →'}</button></div>`);
-  const first = $('#f-title'); if (first) first.focus();
+  const first = document.querySelector('#sheet .inp'); if (first && first.type !== 'date') first.focus();
 }
 function grab() { if ($('#f-title')) { F.title = $('#f-title').value.trim(); F.details = $('#f-details').value.trim(); } if ($('#f-link')) F.link = $('#f-link').value.trim(); if ($('#f-est') && $('#f-est').value) F.est_min = Number($('#f-est').value) || F.est_min; }
 function formNext() { grab(); if (F.step === 1 && !F.title) { toast('Donne un titre à la mission', true); return; } F.step++; renderForm(); }

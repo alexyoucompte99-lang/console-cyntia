@@ -9,6 +9,7 @@
 //   mission_update { id, fields:{…} }              ex. {status:'done', done_at, actual_min, note}
 //   mission_delete { id }
 //   eod_submit     { date, mood, energy, good, hard, lauric_done }   upsert par date + Telegram à Alex
+//   eod_delete     { date }                        supprime l'EOD d'une date (nettoyage de tests)
 //   tg_test        {}                              message de test
 //   state          {}
 
@@ -40,6 +41,7 @@ function doPost(e) {
     if (p.what === 'mission_update') return out(missionUpdate(p));
     if (p.what === 'mission_delete') return out(missionDelete(p));
     if (p.what === 'eod_submit') return out(eodSubmit(p));
+    if (p.what === 'eod_delete') return out(eodDelete(p));
     if (p.what === 'tg_test') return out({ ok: sendTg('🧭 Console Cyntia : test de notification OK') });
     return out({ ok: false, error: 'unknown what' });
   } catch (err) {
@@ -201,6 +203,19 @@ function eodSubmit(p) {
   lines.push('📋 Reste ' + todo.length + ' mission' + (todo.length > 1 ? 's' : '') + (late.length ? ' dont ' + late.length + ' en retard' : ''));
   const tg = sendTg(lines.join('\n'));
   return { ok: true, updated: isUpdate, tg };
+}
+
+function eodDelete(p) {
+  const sh = tab(book(), EOD_TAB, EOD_HDR);
+  const last = sh.getLastRow();
+  if (last < 2) return { ok: false, error: 'aucun EOD' };
+  const dates = sh.getRange(2, 1, last - 1, 1).getValues();
+  for (let i = dates.length - 1; i >= 0; i--) {
+    const d = dates[i][0];
+    const s = d instanceof Date ? Utilities.formatDate(d, TZ, 'yyyy-MM-dd') : String(d);
+    if (s === String(p.date)) { sh.deleteRow(i + 2); return { ok: true }; }
+  }
+  return { ok: false, error: 'date introuvable' };
 }
 
 function fmtMin(n) {
