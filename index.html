@@ -168,6 +168,21 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .filters button.on{background:var(--ink);color:#fff}
 .lock{max-width:380px;margin:40px auto;text-align:center}
 .lock .inp{text-align:center;font-size:20px;letter-spacing:.2em;margin:14px 0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:7px;font-size:13px;font-weight:700;color:var(--muted)}
+.meta span{display:inline-flex;align-items:center;gap:5px}
+.meta .dl{color:var(--sage)} .meta .dl.today{color:#9A6B00} .meta .dl.late{color:#C2412A}
+.linkbtn{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:7px 12px;border-radius:10px;background:var(--lav-soft);color:var(--lav);font-weight:800;font-size:13px;text-decoration:none}
+.sec .tot{font-weight:700;letter-spacing:0;text-transform:none;margin-left:8px;color:var(--muted)}
+.note{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.note:first-child{border-top:0;padding-top:0}
+.note .txt{flex:1;white-space:pre-wrap;font-size:14px}
+.note .when{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+.note.seen .txt{color:var(--muted)}
+.notes-card{border-left:5px solid var(--lav)}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px}
+.plan div{background:rgba(255,255,255,.18);border-radius:12px;padding:8px 10px}
+.plan b{display:block;font-size:18px;line-height:1.1}
+.plan span{font-size:12px;opacity:.92}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -201,7 +216,7 @@ const ALEX_CODE = 'alex26';
 const TIME_CHIPS = [15, 30, 45, 60, 90, 120, 180, 240];
 
 // ---------- état ----------
-let S = { missions: [], eods: [] };
+let S = { missions: [], eods: [], notes: [] };
 let role = localStorage.getItem('cc_role') || 'cyntia';
 let tab = (location.hash || '').replace('#', '');
 let alexOk = localStorage.getItem('cc_alex') === '1';
@@ -253,12 +268,12 @@ async function load(silent) {
     const r = await fetch(`${PONT}?key=${KEY}&what=state&_=${Date.now()}`, { cache: 'no-store' });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'réponse pont');
-    S.missions = (j.missions || []).map(norm); S.eods = j.eods || [];
+    S.missions = (j.missions || []).map(norm); S.eods = j.eods || []; S.notes = j.notes || [];
     localStorage.setItem('cc_cache', JSON.stringify(S));
     setStatus('en direct · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     const c = localStorage.getItem('cc_cache');
-    if (c) { try { S = JSON.parse(c); } catch (_) { } }
+    if (c) { try { S = JSON.parse(c); S.notes = S.notes || []; } catch (_) { } }
     setStatus('hors ligne · copie locale', 'err');
   }
   render();
@@ -305,6 +320,7 @@ function render() {
   $('#tabs').innerHTML = tabs.map(([id, lbl]) => {
     let b = '';
     if (id === 'missions' || id === 'pilotage') b = todo.length ? `<span class="badge">${todo.length}</span>` : '';
+    if (id === 'missions' && S.notes.some(n => !n.seen_at)) b += '<span class="badge" style="background:var(--lav)">📝</span>';
     if (id === 'eod' && !eodToday) b = '<span class="badge">!</span>';
     if (id === 'pilotage' && late) b = `<span class="badge">${late} ⏰</span>`;
     return `<button class="${id === tab ? 'on' : ''}" onclick="showTab('${id}')">${lbl}${b}</button>`;
@@ -315,32 +331,93 @@ function render() {
 }
 
 // ================= VUE CYNTIA =================
+function deadlineText(m) {
+  if (!m.deadline) return { cls: '', txt: 'Pas de deadline' };
+  const d = m.deadline, t = TODAY();
+  const full = fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' });
+  if (m.status === 'done') return { cls: '', txt: 'Pour le ' + full };
+  const n = Math.round((new Date(d + 'T12:00:00') - new Date(t + 'T12:00:00')) / 864e5);
+  if (n < 0) return { cls: 'late', txt: `En retard de ${-n} j · c'était ${full}` };
+  if (n === 0) return { cls: 'today', txt: `Pour aujourd'hui` };
+  if (n === 1) return { cls: '', txt: `Pour demain (${full})` };
+  return { cls: '', txt: `Pour ${full} · dans ${n} jours` };
+}
+function when(iso) { if (!iso) return ''; const s = String(iso); return dayLabel(s.slice(0, 10)) + (s.length > 15 ? ' à ' + s.slice(11, 16) : ''); }
+
 function missionRow(m, forAlex) {
   const done = m.status === 'done';
-  const chips = [deadlineChip(m), m.est_min ? `<span class="chip time">~ ${fmtMin(m.est_min)}</span>` : '', done && m.actual_min ? `<span class="chip time">✔ ${fmtMin(m.actual_min)} réel</span>` : '', prioChip(m.priority), linkChip(m)].join('');
+  const dl = deadlineText(m);
   const act = forAlex
     ? `<div class="mact"><button class="icon" title="Modifier" onclick="openMissionForm('${m.id}')">✎</button><button class="icon" title="Supprimer" onclick="delMission('${m.id}')">🗑</button></div>`
     : '';
   return `<div class="mission ${done ? 'done' : ''}">
     <button class="chk" onclick="${done ? `undoDone('${m.id}')` : `openDone('${m.id}')`}" title="${done ? 'Annuler' : 'Marquer comme faite'}">${done ? '✓' : ''}</button>
-    <div class="mbody"><div class="mtitle">${esc(m.title)}</div>${m.details ? `<div class="mdet">${esc(m.details)}</div>` : ''}
-      ${done && m.note ? `<div class="mdet">💬 ${esc(m.note)}</div>` : ''}<div class="chips">${chips}</div></div>${act}</div>`;
+    <div class="mbody"><div class="mtitle">${esc(m.title)} ${prioChip(m.priority)}</div>${m.details ? `<div class="mdet">${esc(m.details)}</div>` : ''}
+      <div class="meta"><span class="dl ${dl.cls}">📅 ${dl.txt}</span>${m.est_min ? `<span>⏱ Temps prévu : ${fmtMin(m.est_min)}</span>` : ''}${done && m.actual_min ? `<span style="color:var(--sage)">✔ Fait en ${fmtMin(m.actual_min)}${m.est_min ? (m.actual_min > m.est_min ? ` (+${m.actual_min - m.est_min} min)` : m.actual_min < m.est_min ? ` (−${m.est_min - m.actual_min} min)` : ' (pile)') : ''}</span>` : ''}${forAlex && m.created ? `<span>Ajoutée ${when(m.created)}</span>` : ''}</div>
+      ${m.link ? `<a class="linkbtn" href="${esc(m.link)}" target="_blank" rel="noopener">🔗 Ouvrir le lien de la mission</a>` : ''}
+      ${done && m.note ? `<div class="mdet">💬 ${esc(m.note)}</div>` : ''}</div>${act}</div>`;
+}
+
+const GROUPS = [['late', '⏰ En retard', 'late'], ['today', "🔥 Aujourd'hui", ''], ['tomorrow', 'Demain', ''], ['week', 'Cette semaine', ''], ['later', 'Plus tard', ''], ['none', 'Sans deadline', '']];
+function groupTodo(todo) {
+  const t = TODAY(), tm = addDays(t, 1), wk = addDays(t, 7);
+  const g = { late: [], today: [], tomorrow: [], week: [], later: [], none: [] };
+  todo.forEach(m => { if (!m.deadline) g.none.push(m); else if (m.deadline < t) g.late.push(m); else if (m.deadline === t) g.today.push(m); else if (m.deadline === tm) g.tomorrow.push(m); else if (m.deadline <= wk) g.week.push(m); else g.later.push(m); });
+  return g;
+}
+function sections(g, forAlex) {
+  return GROUPS.map(([k, l, cls]) => {
+    const arr = g[k]; if (!arr.length) return '';
+    const est = arr.reduce((s, m) => s + m.est_min, 0);
+    return `<div class="sec ${cls}">${l}<span class="tot">· ${arr.length} mission${arr.length > 1 ? 's' : ''}${est ? ` · ~${fmtMin(est)}` : ''}</span></div><div class="card">${arr.map(m => missionRow(m, forAlex)).join('')}</div>`;
+  }).join('');
 }
 
 function vMissions() {
   const todo = S.missions.filter(m => m.status !== 'done').sort(sortTodo);
-  const late = todo.filter(m => m.deadline && m.deadline < TODAY());
-  const rest = todo.filter(m => !late.includes(m));
+  const g = groupTodo(todo);
   const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === TODAY());
   const tot = doneToday.reduce((s, m) => s + m.actual_min, 0);
+  const estToday = [...g.late, ...g.today].reduce((s, m) => s + m.est_min, 0);
+  const estWeek = [...g.tomorrow, ...g.week].reduce((s, m) => s + m.est_min, 0);
   const h = new Date().getHours();
   const hello = h < 12 ? 'Bonjour Cyntia ☀️' : h < 18 ? 'Bon après-midi Cyntia 🌿' : 'Bonsoir Cyntia 🌙';
-  let html = `<div class="hello"><b>${hello}</b><p>${todo.length ? `${todo.length} mission${todo.length > 1 ? 's' : ''} à faire${late.length ? `, dont ${late.length} en retard` : ''}.` : 'Tout est fait, bravo ! 🎉'}${doneToday.length ? ` Aujourd'hui : ${doneToday.length} faite${doneToday.length > 1 ? 's' : ''} (${fmtMin(tot)}).` : ''}</p></div>`;
+  let html = `<div class="hello"><b>${hello}</b><p>${todo.length ? `${todo.length} mission${todo.length > 1 ? 's' : ''} à faire au total.` : 'Tout est fait, bravo ! 🎉'}</p>
+    <div class="plan">
+      <div><b>${g.late.length + g.today.length}</b><span>à faire aujourd'hui${estToday ? ` · ~${fmtMin(estToday)}` : ''}</span></div>
+      ${g.late.length ? `<div><b style="color:#FFD9CF">${g.late.length}</b><span>en retard</span></div>` : ''}
+      <div><b>${g.tomorrow.length + g.week.length}</b><span>d'ici 7 jours${estWeek ? ` · ~${fmtMin(estWeek)}` : ''}</span></div>
+      <div><b>${doneToday.length}</b><span>faite${doneToday.length > 1 ? 's' : ''} aujourd'hui${tot ? ` · ${fmtMin(tot)}` : ''}</span></div>
+    </div></div>`;
+  html += vNotesCyntia();
   if (!todo.length && !doneToday.length) html += `<div class="card"><div class="empty"><div class="big">🌤️</div>Aucune mission pour le moment.<br>Alex t'en ajoutera bientôt.</div></div>`;
-  if (late.length) html += `<div class="sec late">⏰ En retard</div><div class="card">${late.map(m => missionRow(m)).join('')}</div>`;
-  if (rest.length) html += `<div class="sec">À faire</div><div class="card">${rest.map(m => missionRow(m)).join('')}</div>`;
-  if (doneToday.length) html += `<div class="sec">Faites aujourd'hui</div><div class="card">${doneToday.map(m => missionRow(m)).join('')}</div>`;
+  html += sections(g, false);
+  if (doneToday.length) html += `<div class="sec">✅ Faites aujourd'hui<span class="tot">· ${fmtMin(tot)}</span></div><div class="card">${doneToday.map(m => missionRow(m)).join('')}</div>`;
   return html;
+}
+
+// ----- messages d'Alex -----
+function vNotesCyntia() {
+  const un = S.notes.filter(n => !n.seen_at).sort((a, b) => String(a.created).localeCompare(String(b.created)));
+  const seen = S.notes.filter(n => n.seen_at).sort((a, b) => String(b.created).localeCompare(String(a.created))).slice(0, 3);
+  if (!un.length && !seen.length) return '';
+  return `<div class="card notes-card"><h2>📝 Messages d'Alex ${un.length ? `<small>${un.length} nouveau${un.length > 1 ? 'x' : ''}</small>` : ''}</h2>
+    ${un.map(n => `<div class="note"><div style="flex:1"><div class="txt">${esc(n.text)}</div><div class="when">${when(n.created)}</div></div><button class="btn sm lav" onclick="noteSeen('${n.id}')">Vu ✓</button></div>`).join('')}
+    ${seen.map(n => `<div class="note seen"><div style="flex:1"><div class="txt">${esc(n.text)}</div><div class="when">${when(n.created)} · vu ✓</div></div></div>`).join('')}</div>`;
+}
+async function noteSeen(id) {
+  const n = S.notes.find(x => x.id === id); if (n) n.seen_at = isoNow(); render();
+  try { await post({ what: 'note_seen', id }); load(true); } catch (e) { toast('Pas enregistré : ' + e.message, true); }
+}
+async function noteAdd() {
+  const t = $('#n-text').value.trim(); if (!t) { toast('Écris un message', true); return; }
+  S.notes.push({ id: 'tmp' + Date.now(), created: isoNow(), text: t, seen_at: '' }); render();
+  try { await post({ what: 'note_add', text: t }); toast('Envoyé à Cyntia ✓'); load(true); } catch (e) { toast('Échec : ' + e.message, true); load(true); }
+}
+async function noteDel(id) {
+  if (!confirm('Supprimer ce message ?')) return;
+  S.notes = S.notes.filter(n => n.id !== id); render();
+  try { await post({ what: 'note_delete', id }); load(true); } catch (e) { toast('Échec : ' + e.message, true); load(true); }
 }
 
 function openDone(id) {
@@ -420,26 +497,39 @@ async function sendEod() {
 function vHisto() {
   const days = dayIndex();
   const keys = Object.keys(days).sort().reverse().filter(k => k !== TODAY()).slice(0, 30);
-  if (!keys.length) return `<div class="card"><div class="empty"><div class="big">📖</div>Ton historique se remplira au fil des jours.</div></div>`;
+  const t = TODAY(), ws = weekStart(t);
+  const wk = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) >= ws);
+  const wkMin = wk.reduce((s, m) => s + m.actual_min, 0);
+  const wkDl = wk.filter(m => m.deadline); const wkOn = wkDl.filter(m => String(m.done_at).slice(0, 10) <= m.deadline).length;
+  const wkEod = S.eods.filter(e => String(e.date).slice(0, 10) >= ws).length;
   const doneAll = S.missions.filter(m => m.status === 'done');
   const tot = doneAll.reduce((s, m) => s + m.actual_min, 0);
-  return `<div class="kpis"><div class="kpi sage"><div class="v">${doneAll.length}</div><div class="l">missions faites au total</div></div><div class="kpi lav"><div class="v">${fmtMin(tot)}</div><div class="l">de travail tracké</div></div><div class="kpi sun"><div class="v">${S.eods.length}</div><div class="l">EOD envoyés</div></div></div>
+  let html = `<div class="card"><h2>Ma semaine <small>depuis lundi ${fmtDate(ws, { day: 'numeric', month: 'short' })}</small></h2>
+    <div class="kpis" style="margin:0"><div class="kpi sage"><div class="v">${wk.length}</div><div class="l">missions faites</div></div><div class="kpi lav"><div class="v">${fmtMin(wkMin)}</div><div class="l">de travail</div></div><div class="kpi ${wkDl.length && wkOn < wkDl.length ? 'coral' : 'sage'}"><div class="v">${wkDl.length ? `${wkOn}/${wkDl.length}` : '–'}</div><div class="l">dans les délais</div></div><div class="kpi sun"><div class="v">${wkEod}</div><div class="l">EOD envoyé${wkEod > 1 ? 's' : ''}</div></div></div></div>`;
+  if (!keys.length) return html + `<div class="card"><div class="empty"><div class="big">📖</div>Ton historique se remplira au fil des jours.</div></div>`;
+  html += `<div class="kpis"><div class="kpi sage"><div class="v">${doneAll.length}</div><div class="l">missions faites au total</div></div><div class="kpi lav"><div class="v">${fmtMin(tot)}</div><div class="l">de travail tracké</div></div><div class="kpi sun"><div class="v">${S.eods.length}</div><div class="l">EOD envoyés</div></div></div>
     <div class="card">${keys.map(k => dayBlock(k, days[k], false)).join('')}</div>`;
+  return html;
 }
 
 // ================= VUE ALEX =================
 function vPilotage() {
   const todo = S.missions.filter(m => m.status !== 'done').sort(sortTodo);
-  const late = todo.filter(m => m.deadline && m.deadline < TODAY());
-  const rest = todo.filter(m => !late.includes(m));
+  const g = groupTodo(todo);
   const done = S.missions.filter(m => m.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
   const estLeft = todo.reduce((s, m) => s + m.est_min, 0);
   const eodToday = S.eods.find(e => String(e.date).slice(0, 10) === TODAY());
-  let html = `<div class="hello alex"><b>Pilotage</b><p>${todo.length} mission${todo.length > 1 ? 's' : ''} en cours (~${fmtMin(estLeft)} estimées)${late.length ? ` · <b>${late.length} en retard</b>` : ''} · EOD du jour : ${eodToday ? `reçu ${MOODS[eodToday.mood] || ''}` : 'pas encore'}</p></div>`;
+  const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === TODAY());
+  const notes = [...S.notes].sort((a, b) => String(b.created).localeCompare(String(a.created))).slice(0, 5);
+  let html = `<div class="hello alex"><b>Pilotage</b><p>${todo.length} mission${todo.length > 1 ? 's' : ''} en cours${estLeft ? ` (~${fmtMin(estLeft)} estimées)` : ''} · EOD du jour : ${eodToday ? `reçu ${MOODS[eodToday.mood] || ''}` : 'pas encore'}</p>
+    <div class="plan"><div><b>${g.late.length}</b><span>en retard</span></div><div><b>${g.today.length}</b><span>pour aujourd'hui</span></div><div><b>${g.tomorrow.length + g.week.length}</b><span>d'ici 7 jours</span></div><div><b>${doneToday.length}</b><span>faite${doneToday.length > 1 ? 's' : ''} aujourd'hui par Cyntia</span></div></div></div>`;
+  html += `<div class="card notes-card"><h2>📝 Message pour Cyntia <small>idée, consigne, rappel</small></h2>
+    <textarea class="inp" id="n-text" placeholder="Ex : Pense à vérifier les DM avant midi. Idée : on pourrait…" style="min-height:64px"></textarea>
+    <div class="row" style="margin-top:10px"><span class="hint">Elle le voit en haut de ses missions et coche « Vu ».</span><button class="btn lav sm" onclick="noteAdd()">Envoyer</button></div>
+    ${notes.length ? `<div style="margin-top:12px">${notes.map(n => `<div class="note ${n.seen_at ? 'seen' : ''}"><div style="flex:1"><div class="txt">${esc(n.text)}</div><div class="when">${when(n.created)} · ${n.seen_at ? 'vu ' + when(n.seen_at) + ' ✓' : 'pas encore vu'}</div></div><button class="icon" title="Supprimer" onclick="noteDel('${n.id}')">🗑</button></div>`).join('')}</div>` : ''}</div>`;
   if (!S.missions.length) html += `<div class="card"><div class="empty"><div class="big">🗒️</div>Aucune mission. Clique sur « Nouvelle mission » pour commencer.</div></div>`;
-  if (late.length) html += `<div class="sec late">⏰ En retard</div><div class="card">${late.map(m => missionRow(m, true)).join('')}</div>`;
-  if (rest.length) html += `<div class="sec">À faire</div><div class="card">${rest.map(m => missionRow(m, true)).join('')}</div>`;
-  if (done.length) html += `<div class="sec">Faites (${done.length})</div><div class="card">${done.slice(0, 15).map(m => missionRow(m, true)).join('')}${done.length > 15 ? `<p class="hint" style="text-align:center;margin:10px 0 0">… et ${done.length - 15} autres dans Récap / Data</p>` : ''}</div>`;
+  html += sections(g, true);
+  if (done.length) html += `<div class="sec">✅ Faites (${done.length})</div><div class="card">${done.slice(0, 15).map(m => missionRow(m, true)).join('')}${done.length > 15 ? `<p class="hint" style="text-align:center;margin:10px 0 0">… et ${done.length - 15} autres dans Récap / Data</p>` : ''}</div>`;
   return html;
 }
 

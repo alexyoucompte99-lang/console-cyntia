@@ -9,6 +9,9 @@
 //   mission_update { id, fields:{…} }              ex. {status:'done', done_at, actual_min, note}
 //   mission_delete { id }
 //   eod_submit     { date, mood, energy, good, hard, lauric_done }   upsert par date + Telegram à Alex
+//   note_add       { text }                        message d'Alex pour Cyntia (idée, consigne)
+//   note_seen      { id }                          Cyntia a vu le message
+//   note_delete    { id }
 //   eod_delete     { date }                        supprime l'EOD d'une date (nettoyage de tests)
 //   tg_test        {}                              message de test
 //   state          {}
@@ -21,6 +24,9 @@ const MIS_HDR = ['ID', 'Créée le', 'Titre', 'Détails', 'Lien', 'Deadline', 'E
 const MIS_KEYS = ['id', 'created', 'title', 'details', 'link', 'deadline', 'est_min', 'priority', 'status', 'done_at', 'actual_min', 'note', 'updated'];
 const EOD_HDR = ['Date', 'Humeur /5', 'Énergie /5', 'Ce qui a bien marché', 'Difficultés / besoins', 'EOD Lauric fait', 'Missions faites', 'Temps total (min)', 'Envoyé le'];
 const EOD_KEYS = ['date', 'mood', 'energy', 'good', 'hard', 'lauric_done', 'missions_done', 'total_min', 'sent_at'];
+const NOTES_TAB = 'Notes';
+const NOTES_HDR = ['ID', 'Créée le', 'Message', 'Vu le'];
+const NOTES_KEYS = ['id', 'created', 'text', 'seen_at'];
 const TZ = 'Europe/Paris';
 
 function doGet(e) {
@@ -42,6 +48,9 @@ function doPost(e) {
     if (p.what === 'mission_delete') return out(missionDelete(p));
     if (p.what === 'eod_submit') return out(eodSubmit(p));
     if (p.what === 'eod_delete') return out(eodDelete(p));
+    if (p.what === 'note_add') return out(noteAdd(p));
+    if (p.what === 'note_seen') return out(noteSeen(p));
+    if (p.what === 'note_delete') return out(noteDelete(p));
     if (p.what === 'tg_test') return out({ ok: sendTg('🧭 Console Cyntia : test de notification OK') });
     return out({ ok: false, error: 'unknown what' });
   } catch (err) {
@@ -56,6 +65,7 @@ function setup(p) {
   const ss = book();
   tab(ss, MIS_TAB, MIS_HDR);
   tab(ss, EOD_TAB, EOD_HDR);
+  tab(ss, NOTES_TAB, NOTES_HDR);
   const def = ss.getSheetByName('Feuille 1') || ss.getSheetByName('Sheet1');
   if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
   installAlert();
@@ -109,6 +119,7 @@ function state() {
     now: Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd'T'HH:mm:ss"),
     missions: rows(tab(ss, MIS_TAB, MIS_HDR), MIS_KEYS),
     eods: rows(tab(ss, EOD_TAB, EOD_HDR), EOD_KEYS),
+    notes: rows(tab(ss, NOTES_TAB, NOTES_HDR), NOTES_KEYS),
   };
 }
 
@@ -154,6 +165,31 @@ function missionDelete(p) {
   const sh = tab(ss, MIS_TAB, MIS_HDR);
   const r = findRow(sh, p.id);
   if (!r) return { ok: false, error: 'mission introuvable' };
+  sh.deleteRow(r);
+  return { ok: true };
+}
+
+// ---------- notes d'Alex ----------
+function noteAdd(p) {
+  const sh = tab(book(), NOTES_TAB, NOTES_HDR);
+  const id = 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const row = [id, stamp(), String(p.text || '').trim(), ''];
+  if (!row[2]) return { ok: false, error: 'message vide' };
+  sh.appendRow(row);
+  sh.getRange(sh.getLastRow(), 1, 1, row.length).setNumberFormat('@');
+  return { ok: true, id };
+}
+function noteSeen(p) {
+  const sh = tab(book(), NOTES_TAB, NOTES_HDR);
+  const r = findRow(sh, p.id);
+  if (!r) return { ok: false, error: 'note introuvable' };
+  sh.getRange(r, 4).setNumberFormat('@').setValue(stamp());
+  return { ok: true };
+}
+function noteDelete(p) {
+  const sh = tab(book(), NOTES_TAB, NOTES_HDR);
+  const r = findRow(sh, p.id);
+  if (!r) return { ok: false, error: 'note introuvable' };
   sh.deleteRow(r);
   return { ok: true };
 }
