@@ -12,6 +12,8 @@
 //   note_add       { text }                        message d'Alex pour Cyntia (idée, consigne)
 //   note_seen      { id }                          Cyntia a vu le message
 //   note_delete    { id }
+//   mission_block  { id, text }                    Cyntia bloque : marque la mission + Telegram immédiat à Alex
+//   mission_unblock{ id }
 //   eod_delete     { date }                        supprime l'EOD d'une date (nettoyage de tests)
 //   tg_test        {}                              message de test
 //   state          {}
@@ -20,8 +22,15 @@ const KEY = 'cyntia-ce6892b5a42b55849eb4460d';
 const P = PropertiesService.getScriptProperties();
 const MIS_TAB = 'Missions';
 const EOD_TAB = 'EOD';
-const MIS_HDR = ['ID', 'Créée le', 'Titre', 'Détails', 'Lien', 'Deadline', 'Estimé (min)', 'Priorité', 'Statut', 'Faite le', 'Réel (min)', 'Note Cyntia', 'MAJ'];
-const MIS_KEYS = ['id', 'created', 'title', 'details', 'link', 'deadline', 'est_min', 'priority', 'status', 'done_at', 'actual_min', 'note', 'updated'];
+const MIS_HDR = ['ID', 'Créée le', 'Titre', 'Détails', 'Lien', 'Deadline', 'Estimé (min)', 'Priorité', 'Statut', 'Faite le', 'Réel (min)', 'Note Cyntia', 'MAJ', 'Bloquée', 'Blocage'];
+const MIS_KEYS = ['id', 'created', 'title', 'details', 'link', 'deadline', 'est_min', 'priority', 'status', 'done_at', 'actual_min', 'note', 'updated', 'blocked', 'block_text'];
+const CYNTIA_EMAIL = 'cynthia.thomas.va@gmail.com';
+const PAGE_URL = 'https://alexyoucompte99-lang.github.io/console-cyntia/';
+const LAURIC_EOD = 'https://alexyoucompte99-lang.github.io/console-prospection-lauric/#eod';
+// Missions récurrentes créées automatiquement le matin (days : 1 = lundi … 7 = dimanche)
+const RECURRING = [
+  { title: "Remplir l'EOD de Lauric", details: "Ouvre la console de Lauric, remplis l'EOD du jour, puis coche cette mission.", link: LAURIC_EOD, est_min: 10, priority: 'normale', days: [1, 2, 3, 4, 5] },
+];
 const EOD_HDR = ['Date', 'Humeur /5', 'Énergie /5', 'Ce qui a bien marché', 'Difficultés / besoins', 'EOD Lauric fait', 'Missions faites', 'Temps total (min)', 'Envoyé le'];
 const EOD_KEYS = ['date', 'mood', 'energy', 'good', 'hard', 'lauric_done', 'missions_done', 'total_min', 'sent_at'];
 const NOTES_TAB = 'Notes';
@@ -48,6 +57,8 @@ function doPost(e) {
     if (p.what === 'mission_delete') return out(missionDelete(p));
     if (p.what === 'eod_submit') return out(eodSubmit(p));
     if (p.what === 'eod_delete') return out(eodDelete(p));
+    if (p.what === 'mission_block') return out(missionBlock(p));
+    if (p.what === 'mission_unblock') return out(missionUnblock(p));
     if (p.what === 'note_add') return out(noteAdd(p));
     if (p.what === 'note_seen') return out(noteSeen(p));
     if (p.what === 'note_delete') return out(noteDelete(p));
@@ -68,8 +79,10 @@ function setup(p) {
   tab(ss, NOTES_TAB, NOTES_HDR);
   const def = ss.getSheetByName('Feuille 1') || ss.getSheetByName('Sheet1');
   if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
-  installAlert();
-  return { ok: true, sheet_url: ss.getUrl(), sheet_id: ss.getId(), tg: !!P.getProperty('TG_TOKEN') };
+  installTriggers();
+  createRecurring();
+  scheduleToday();
+  return { ok: true, sheet_url: ss.getUrl(), sheet_id: ss.getId(), tg: !!P.getProperty('TG_TOKEN'), triggers: ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction()) };
 }
 
 function book() {
@@ -86,13 +99,51 @@ function tab(ss, name, hdr) {
     sh = ss.insertSheet(name);
     sh.getRange(1, 1, 1, hdr.length).setValues([hdr]).setFontWeight('bold');
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < hdr.length) {
+    // colonnes ajoutées après coup (ex. Bloquée / Blocage)
+    sh.getRange(1, 1, 1, hdr.length).setValues([hdr]).setFontWeight('bold');
   }
   return sh;
 }
 
-function installAlert() {
-  const has = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'alertMissingEod');
-  if (!has) ScriptApp.newTrigger('alertMissingEod').timeBased().everyDays(1).atHour(21).nearMinute(15).inTimezone(TZ).create();
+// Déclencheurs : tout est recréé proprement (les anciens sont supprimés).
+//  - createRecurring : tous les jours vers 6h -> missions récurrentes du jour
+//  - scheduleToday   : tous les jours vers 15h -> pose 2 déclencheurs ponctuels précis : 16h55 mail à Cyntia, 17h30 alerte Alex
+function installTriggers() {
+  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('createRecurring').timeBased().everyDays(1).atHour(6).nearMinute(0).inTimezone(TZ).create();
+  ScriptApp.newTrigger('scheduleToday').timeBased().everyDays(1).atHour(15).nearMinute(0).inTimezone(TZ).create();
+}
+function dowToday() { return Number(Utilities.formatDate(new Date(), TZ, 'u')); }
+function tzOffsetMinutes(d) {
+  const z = Utilities.formatDate(d, TZ, 'Z'); // ex. +0200
+  return (z[0] === '-' ? -1 : 1) * (Number(z.slice(1, 3)) * 60 + Number(z.slice(3, 5)));
+}
+function atToday(h, m) {
+  const now = new Date();
+  const y = Number(Utilities.formatDate(now, TZ, 'yyyy')), mo = Number(Utilities.formatDate(now, TZ, 'M')), d = Number(Utilities.formatDate(now, TZ, 'd'));
+  return new Date(Date.UTC(y, mo - 1, d, h, m) - tzOffsetMinutes(now) * 60000);
+}
+function scheduleToday() {
+  if (dowToday() > 5) return;
+  ['remindCyntiaEod', 'alertMissingEod'].forEach(fn => ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === fn).forEach(t => ScriptApp.deleteTrigger(t)));
+  const now = new Date();
+  const t1 = atToday(16, 55), t2 = atToday(17, 30);
+  if (t1 > now) ScriptApp.newTrigger('remindCyntiaEod').timeBased().at(t1).create();
+  if (t2 > now) ScriptApp.newTrigger('alertMissingEod').timeBased().at(t2).create();
+}
+function createRecurring() {
+  const dow = dowToday();
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const ss = book();
+  const existing = rows(tab(ss, MIS_TAB, MIS_HDR), MIS_KEYS);
+  let n = 0;
+  RECURRING.filter(r => r.days.includes(dow)).forEach(r => {
+    if (existing.some(m => m.title === r.title && String(m.deadline).slice(0, 10) === today)) return;
+    missionAdd({ title: r.title, details: r.details, link: r.link, deadline: today, est_min: r.est_min, priority: r.priority });
+    n++;
+  });
+  return n;
 }
 
 // ---------- lecture ----------
@@ -132,7 +183,7 @@ function missionAdd(p) {
   const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const now = stamp();
   const row = [id, now, String(p.title || '').trim(), String(p.details || ''), String(p.link || ''),
-    String(p.deadline || ''), Number(p.est_min) || '', String(p.priority || 'normale'), 'todo', '', '', '', now];
+    String(p.deadline || ''), Number(p.est_min) || '', String(p.priority || 'normale'), 'todo', '', '', '', now, '', ''];
   sh.appendRow(row);
   sh.getRange(sh.getLastRow(), 1, 1, row.length).setNumberFormat('@');
   return { ok: true, id };
@@ -166,6 +217,32 @@ function missionDelete(p) {
   const r = findRow(sh, p.id);
   if (!r) return { ok: false, error: 'mission introuvable' };
   sh.deleteRow(r);
+  return { ok: true };
+}
+
+// ---------- blocage ----------
+function missionBlock(p) {
+  const ss = book();
+  const sh = tab(ss, MIS_TAB, MIS_HDR);
+  const r = findRow(sh, p.id);
+  if (!r) return { ok: false, error: 'mission introuvable' };
+  const text = String(p.text || '').trim();
+  if (!text) return { ok: false, error: 'explication vide' };
+  sh.getRange(r, MIS_KEYS.indexOf('blocked') + 1).setNumberFormat('@').setValue('OUI');
+  sh.getRange(r, MIS_KEYS.indexOf('block_text') + 1).setNumberFormat('@').setValue(text);
+  sh.getRange(r, MIS_KEYS.indexOf('updated') + 1).setNumberFormat('@').setValue(stamp());
+  const title = sh.getRange(r, MIS_KEYS.indexOf('title') + 1).getValue();
+  const dl = sh.getRange(r, MIS_KEYS.indexOf('deadline') + 1).getValue();
+  const tg = sendTg('🙋 Cyntia bloque sur « ' + title + ' »\n\n' + text + (dl ? '\n\nDeadline : ' + Utilities.formatDate(new Date(String(dl).slice(0, 10) + 'T12:00:00'), TZ, 'EEEE d MMMM') : '') + '\n\nRéponds-lui via « Message pour Cyntia » : ' + PAGE_URL + '?vue=alex');
+  return { ok: true, tg };
+}
+function missionUnblock(p) {
+  const sh = tab(book(), MIS_TAB, MIS_HDR);
+  const r = findRow(sh, p.id);
+  if (!r) return { ok: false, error: 'mission introuvable' };
+  sh.getRange(r, MIS_KEYS.indexOf('blocked') + 1).setValue('');
+  sh.getRange(r, MIS_KEYS.indexOf('block_text') + 1).setValue('');
+  sh.getRange(r, MIS_KEYS.indexOf('updated') + 1).setNumberFormat('@').setValue(stamp());
   return { ok: true };
 }
 
@@ -262,18 +339,34 @@ function fmtMin(n) {
   return h + 'h' + (m ? String(m).padStart(2, '0') : '');
 }
 
-// Alerte quotidienne (21h15, lundi -> vendredi) si l'EOD du jour n'est pas rempli
+function eodFilledToday() {
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  return rows(tab(book(), EOD_TAB, EOD_HDR), EOD_KEYS).some(e => String(e.date).slice(0, 10) === today);
+}
+
+// 16h55 (lundi -> vendredi) : mail de rappel à Cyntia si son EOD du jour n'est pas rempli
+function remindCyntiaEod() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'remindCyntiaEod').forEach(t => ScriptApp.deleteTrigger(t));
+  if (dowToday() > 5 || eodFilledToday()) return;
+  const dateLabel = Utilities.formatDate(new Date(), TZ, 'EEEE d MMMM');
+  MailApp.sendEmail({
+    to: CYNTIA_EMAIL,
+    name: 'Console Cyntia',
+    subject: 'Ton EOD du jour avant 17h 🌙',
+    body: 'Hello Cyntia,\n\nIl est presque 17h et ton EOD du ' + dateLabel + " n'est pas encore rempli.\n\nC'est ici, ça prend 1 minute :\n" + PAGE_URL + "#eod\n\nPense aussi à l'EOD de Lauric si ce n'est pas fait :\n" + LAURIC_EOD + '\n\nBonne fin de journée !\nAlex\n\n(message automatique de la console)',
+  });
+}
+
+// 17h30 (lundi -> vendredi) : alerte Telegram à Alex si l'EOD du jour n'est pas rempli
 function alertMissingEod() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'alertMissingEod').forEach(t => ScriptApp.deleteTrigger(t));
   const now = new Date();
-  const dow = Number(Utilities.formatDate(now, TZ, 'u')); // 1 = lundi … 7 = dimanche
-  if (dow > 5) return;
+  if (dowToday() > 5 || eodFilledToday()) return;
   const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
   const ss = book();
-  const eods = rows(tab(ss, EOD_TAB, EOD_HDR), EOD_KEYS);
-  if (eods.some(e => String(e.date).slice(0, 10) === today)) return;
   const missions = rows(tab(ss, MIS_TAB, MIS_HDR), MIS_KEYS);
   const done = missions.filter(m => m.status === 'done' && String(m.done_at || '').slice(0, 10) === today).length;
-  sendTg('🧭 Cyntia n\'a pas encore rempli son EOD du jour (' + Utilities.formatDate(now, TZ, 'EEEE d MMMM') + ').\n' +
+  sendTg('🧭 Cyntia n\'a pas rempli son EOD du jour (' + Utilities.formatDate(now, TZ, 'EEEE d MMMM') + '), rappel mail envoyé à 16h55.\n' +
     (done ? done + ' mission' + (done > 1 ? 's' : '') + ' cochée' + (done > 1 ? 's' : '') + ' aujourd\'hui.' : 'Aucune mission cochée aujourd\'hui.'));
 }
 
@@ -301,5 +394,6 @@ function autoriser() {
   tab(ss, EOD_TAB, EOD_HDR);
   UrlFetchApp.fetch('https://api.telegram.org/');
   ScriptApp.getProjectTriggers();
+  MailApp.getRemainingDailyQuota();
   Logger.log('OK ' + ss.getUrl());
 }

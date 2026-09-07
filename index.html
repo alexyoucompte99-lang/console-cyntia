@@ -194,6 +194,10 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .g-dots{display:flex;gap:6px;justify-content:center;margin:14px 0 4px}
 .g-dots i{width:8px;height:8px;border-radius:50%;background:#E3DCCF}
 .g-dots i.on{background:var(--sage);width:22px;border-radius:4px}
+.block{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--coral-soft);color:#C2412A;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.block .bt{flex:1;min-width:160px;white-space:pre-wrap}
+.blockbtn{margin-top:8px;margin-left:8px;padding:6px 10px;border-radius:10px;background:#FFF3F0;color:#C2412A;font-weight:800;font-size:12.5px}
+.mission.blocked{background:linear-gradient(90deg,#FFF6F3,transparent 40%);margin:0 -16px;padding-left:16px;padding-right:16px}
 @media(max-width:520px){.gl{display:none}.guide-btn{width:30px;height:30px;padding:0;display:grid;place-items:center}h1{font-size:17px}.brand{gap:8px}.logo{width:36px;height:36px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -290,7 +294,7 @@ async function load(silent) {
   }
   render();
 }
-function norm(m) { m.est_min = Number(m.est_min) || 0; m.actual_min = Number(m.actual_min) || 0; m.deadline = m.deadline ? String(m.deadline).slice(0, 10) : ''; return m; }
+function norm(m) { m.est_min = Number(m.est_min) || 0; m.actual_min = Number(m.actual_min) || 0; m.deadline = m.deadline ? String(m.deadline).slice(0, 10) : ''; m.blocked = String(m.blocked || '').toUpperCase() === 'OUI'; m.block_text = m.block_text || ''; return m; }
 async function post(payload) {
   const r = await fetch(PONT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: KEY, ...payload }) });
   const j = await r.json();
@@ -335,6 +339,7 @@ function render() {
     if (id === 'missions' && S.notes.some(n => !n.seen_at)) b += '<span class="badge" style="background:var(--lav)">📝</span>';
     if (id === 'eod' && !eodToday) b = '<span class="badge">!</span>';
     if (id === 'pilotage' && late) b = `<span class="badge">${late} ⏰</span>`;
+    const nb = todo.filter(m => m.blocked).length; if (id === 'pilotage' && nb) b += `<span class="badge">🙋 ${nb}</span>`;
     return `<button class="${id === tab ? 'on' : ''}" onclick="showTab('${id}')">${lbl}${b}</button>`;
   }).join('');
   $('#fab').hidden = !(role === 'alex' && tab === 'pilotage');
@@ -362,19 +367,23 @@ function missionRow(m, forAlex) {
   const act = forAlex
     ? `<div class="mact"><button class="icon" title="Modifier" onclick="openMissionForm('${m.id}')">✎</button><button class="icon" title="Supprimer" onclick="delMission('${m.id}')">🗑</button></div>`
     : '';
-  return `<div class="mission ${done ? 'done' : ''}">
+  const blockHtml = !done && m.blocked
+    ? `<div class="block"><span>🙋</span><span class="bt"><b>Bloquée :</b> ${esc(m.block_text)}</span><button class="btn sm sec2" onclick="unblock('${m.id}')">${forAlex ? 'Débloquer' : "C'est débloqué"}</button></div>`
+    : (!done && !forAlex ? `<button class="blockbtn" onclick="openBlock('${m.id}')">🙋 Je bloque</button>` : '');
+  return `<div class="mission ${done ? 'done' : ''} ${!done && m.blocked ? 'blocked' : ''}">
     <button class="chk" onclick="${done ? `undoDone('${m.id}')` : `openDone('${m.id}')`}" title="${done ? 'Annuler' : 'Marquer comme faite'}">${done ? '✓' : ''}</button>
     <div class="mbody"><div class="mtitle">${esc(m.title)} ${prioChip(m.priority)}</div>${m.details ? `<div class="mdet">${esc(m.details)}</div>` : ''}
       <div class="meta"><span class="dl ${dl.cls}">📅 ${dl.txt}</span>${m.est_min ? `<span>⏱ Temps prévu : ${fmtMin(m.est_min)}</span>` : ''}${done && m.actual_min ? `<span style="color:var(--sage)">✔ Fait en ${fmtMin(m.actual_min)}${m.est_min ? (m.actual_min > m.est_min ? ` (+${m.actual_min - m.est_min} min)` : m.actual_min < m.est_min ? ` (−${m.est_min - m.actual_min} min)` : ' (pile)') : ''}</span>` : ''}${forAlex && m.created ? `<span>Ajoutée ${when(m.created)}</span>` : ''}</div>
-      ${m.link ? `<a class="linkbtn" href="${esc(m.link)}" target="_blank" rel="noopener">🔗 Ouvrir le lien de la mission</a>` : ''}
+      ${m.link ? `<a class="linkbtn" href="${esc(m.link)}" target="_blank" rel="noopener">🔗 Ouvrir le lien de la mission</a>` : ''}${!done && !m.blocked && !forAlex ? '' : ''}
+      ${blockHtml}
       ${done && m.note ? `<div class="mdet">💬 ${esc(m.note)}</div>` : ''}</div>${act}</div>`;
 }
 
-const GROUPS = [['late', '⏰ En retard', 'late'], ['today', "🔥 Aujourd'hui", ''], ['tomorrow', 'Demain', ''], ['week', 'Cette semaine', ''], ['later', 'Plus tard', ''], ['none', 'Sans deadline', '']];
+const GROUPS = [['blocked', '🙋 Bloquées, Alex doit répondre', 'late'], ['late', '⏰ En retard', 'late'], ['today', "🔥 Aujourd'hui", ''], ['tomorrow', 'Demain', ''], ['week', 'Cette semaine', ''], ['later', 'Plus tard', ''], ['none', 'Sans deadline', '']];
 function groupTodo(todo) {
   const t = TODAY(), tm = addDays(t, 1), wk = addDays(t, 7);
-  const g = { late: [], today: [], tomorrow: [], week: [], later: [], none: [] };
-  todo.forEach(m => { if (!m.deadline) g.none.push(m); else if (m.deadline < t) g.late.push(m); else if (m.deadline === t) g.today.push(m); else if (m.deadline === tm) g.tomorrow.push(m); else if (m.deadline <= wk) g.week.push(m); else g.later.push(m); });
+  const g = { blocked: [], late: [], today: [], tomorrow: [], week: [], later: [], none: [] };
+  todo.forEach(m => { if (m.blocked) g.blocked.push(m); else if (!m.deadline) g.none.push(m); else if (m.deadline < t) g.late.push(m); else if (m.deadline === t) g.today.push(m); else if (m.deadline === tm) g.tomorrow.push(m); else if (m.deadline <= wk) g.week.push(m); else g.later.push(m); });
   return g;
 }
 function sections(g, forAlex) {
@@ -406,6 +415,26 @@ function vMissions() {
   html += sections(g, false);
   if (doneToday.length) html += `<div class="sec">✅ Faites aujourd'hui<span class="tot">· ${fmtMin(tot)}</span></div><div class="card">${doneToday.map(m => missionRow(m)).join('')}</div>`;
   return html;
+}
+
+// ----- je bloque -----
+function openBlock(id) {
+  const m = S.missions.find(x => x.id === id); if (!m) return;
+  openModal(`<h3>Qu'est-ce qui bloque ? 🙋</h3><p class="hint" style="margin:0 0 6px">« ${esc(m.title)} »</p>
+    <p class="hint">Explique en quelques mots : ce qui manque, ce que tu ne comprends pas, ce dont tu as besoin. Alex le reçoit <b>tout de suite</b> sur Telegram et te répond via un message en haut de ta page.</p>
+    <textarea class="inp" id="b-text" placeholder="Ex : je n'ai pas accès au Drive / je ne sais pas quel visuel prendre / il me manque le numéro de…" style="min-height:110px"></textarea>
+    <div class="row"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn coral" onclick="confirmBlock('${id}')">Prévenir Alex 🚨</button></div>`);
+  $('#b-text').focus();
+}
+async function confirmBlock(id) {
+  const text = $('#b-text').value.trim(); if (!text) { toast('Explique ce qui bloque', true); return; }
+  const m = S.missions.find(x => x.id === id); if (m) { m.blocked = true; m.block_text = text; }
+  closeModal(); render();
+  try { const j = await post({ what: 'mission_block', id, text }); toast(j.tg ? 'Alex est prévenu 🚨' : 'Blocage enregistré'); load(true); } catch (e) { toast('Échec : ' + e.message, true); load(true); }
+}
+async function unblock(id) {
+  const m = S.missions.find(x => x.id === id); if (m) { m.blocked = false; m.block_text = ''; } render();
+  try { await post({ what: 'mission_unblock', id }); load(true); } catch (e) { toast('Échec : ' + e.message, true); load(true); }
 }
 
 // ----- messages d'Alex -----
@@ -465,7 +494,8 @@ function vEod() {
   const ex = S.eods.find(e => String(e.date).slice(0, 10) === t);
   const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === t);
   const tot = doneToday.reduce((s, m) => s + m.actual_min, 0);
-  const mood = Number(ex?.mood) || 0, energy = Number(ex?.energy) || 0, lauric = ex ? String(ex.lauric_done).toUpperCase() === 'OUI' : false;
+  const lauricMission = doneToday.some(m => /eod de lauric/i.test(m.title));
+  const mood = Number(ex?.mood) || 0, energy = Number(ex?.energy) || 0, lauric = ex ? String(ex.lauric_done).toUpperCase() === 'OUI' : lauricMission;
   return `<div class="card"><h2>Ma journée <small>${fmtDate(t, { weekday: 'long', day: 'numeric', month: 'long' })}</small></h2>
     <div class="today-sum"><span class="pill">✅ ${doneToday.length} mission${doneToday.length > 1 ? 's' : ''}</span><span class="pill">⏱ ${fmtMin(tot)}</span></div>
     ${doneToday.length ? `<ul class="dlist">${doneToday.map(m => `<li><span>${esc(m.title)}</span><span>${fmtMin(m.actual_min)}</span></li>`).join('')}</ul>` : '<p class="hint" style="margin:10px 0 0">Coche tes missions dans l\'onglet « Mes missions », elles apparaîtront ici.</p>'}
@@ -534,7 +564,7 @@ function vPilotage() {
   const doneToday = S.missions.filter(m => m.status === 'done' && String(m.done_at).slice(0, 10) === TODAY());
   const notes = [...S.notes].sort((a, b) => String(b.created).localeCompare(String(a.created))).slice(0, 5);
   let html = `<div class="hello alex"><b>Pilotage</b><p>${todo.length} mission${todo.length > 1 ? 's' : ''} en cours${estLeft ? ` (~${fmtMin(estLeft)} estimées)` : ''} · EOD du jour : ${eodToday ? `reçu ${MOODS[eodToday.mood] || ''}` : 'pas encore'}</p>
-    <div class="plan"><div><b>${g.late.length}</b><span>en retard</span></div><div><b>${g.today.length}</b><span>pour aujourd'hui</span></div><div><b>${g.tomorrow.length + g.week.length}</b><span>d'ici 7 jours</span></div><div><b>${doneToday.length}</b><span>faite${doneToday.length > 1 ? 's' : ''} aujourd'hui par Cyntia</span></div></div></div>`;
+    <div class="plan">${g.blocked.length ? `<div><b style="color:#FFD9CF">${g.blocked.length}</b><span>bloquée${g.blocked.length > 1 ? 's' : ''} 🙋</span></div>` : ''}<div><b>${g.late.length}</b><span>en retard</span></div><div><b>${g.today.length}</b><span>pour aujourd'hui</span></div><div><b>${g.tomorrow.length + g.week.length}</b><span>d'ici 7 jours</span></div><div><b>${doneToday.length}</b><span>faite${doneToday.length > 1 ? 's' : ''} aujourd'hui par Cyntia</span></div></div></div>`;
   html += `<div class="card notes-card"><h2>📝 Message pour Cyntia <small>idée, consigne, rappel</small></h2>
     <textarea class="inp" id="n-text" placeholder="Ex : Pense à vérifier les DM avant midi. Idée : on pourrait…" style="min-height:64px"></textarea>
     <div class="row" style="margin-top:10px"><span class="hint">Elle le voit en haut de ses missions et coche « Vu ».</span><button class="btn lav sm" onclick="noteAdd()">Envoyer</button></div>
@@ -665,15 +695,15 @@ function vData() {
 // ---------- guide de bienvenue (onboarding Cyntia) ----------
 const GUIDE = [
   { ico: '👋', title: 'Bienvenue Cyntia !', txt: `Cette console, c'est <b>ton tableau de bord</b> avec Alex. Tout ce qu'il te confie arrive ici, et tout ce que tu fais y est noté. Plus besoin de chercher dans WhatsApp ce qu'il fallait faire.`,
-    list: [['📋', 'Tes missions, avec la deadline et le temps prévu'], ['✅', 'Tu coches quand c\'est fait et tu notes le temps réel'], ['🌙', 'Chaque soir, ton EOD en 1 minute'], ['📝', 'Les messages et idées d\'Alex, au même endroit']] },
+    list: [['📋', 'Tes missions, avec la deadline et le temps prévu'], ['✅', 'Tu coches quand c\'est fait et tu notes le temps réel'], ['🙋', 'Un blocage ? Le bouton « Je bloque » prévient Alex tout de suite'], ['🌙', 'Chaque jour avant 17h, ton EOD en 1 minute'], ['📝', 'Les messages et idées d\'Alex, au même endroit']] },
   { ico: '📋', title: 'Tes missions', txt: `Elles sont rangées par échéance : <b>En retard</b>, <b>Aujourd'hui</b>, <b>Demain</b>, <b>Cette semaine</b>… Sur chaque mission tu vois la date limite, le temps qu'Alex a prévu, un lien s'il y en a un, et la priorité.`,
     list: [['🔥', '« Urgente » = à faire en premier'], ['🔗', '« Ouvrir le lien » = doc, vidéo ou page qui explique la mission'], ['🌿', '« Quand tu peux » = pas d\'urgence, quand tu as un creux']] },
   { ico: '✅', title: 'Quand tu as fini', txt: `Tu appuies sur le <b>rond à gauche</b> de la mission. On te demande <b>combien de temps ça t'a pris</b> et si tu veux laisser un commentaire à Alex.`,
-    list: [['⏱', 'Sois honnête sur le temps : ça sert à Alex pour mieux estimer, jamais pour te juger'], ['💬', 'Un souci, une question, un truc à savoir : mets-le dans le commentaire'], ['↩️', 'Cochée par erreur ? Appuie à nouveau sur le rond pour annuler']] },
-  { ico: '🌙', title: 'Chaque soir : ton EOD', txt: `Onglet <b>Mon EOD</b>, avant 21h. Tu dis comment tu t'es sentie, ton énergie, ce qui a bien marché, ce qui a coincé. Tes missions du jour sont ajoutées automatiquement.`,
-    list: [['📲', 'Alex reçoit ton EOD directement sur Telegram'], ['⚠️', 'Les difficultés et les besoins, c\'est la partie la plus utile : ne la saute pas'], ['✏️', 'Envoyé trop tôt ? Tu peux le modifier jusqu\'à minuit']] },
-  { ico: '📋', title: "L'EOD de Lauric, tous les jours", txt: `Dans l'onglet Mon EOD, il y a un bloc violet <b>« EOD de Lauric »</b>. Chaque jour : tu appuies sur <b>Ouvrir</b>, tu remplis l'EOD dans la console de Lauric, puis tu reviens cocher <b>« C'est fait »</b>.`,
-    list: [['1️⃣', 'Ouvrir ↗'], ['2️⃣', 'Remplir l\'EOD chez Lauric'], ['3️⃣', 'Revenir ici et cocher « C\'est fait »'], ['🚀', 'Puis envoyer ton propre EOD']] },
+    list: [['⏱', 'Sois honnête sur le temps : ça sert à Alex pour mieux estimer, jamais pour te juger'], ['💬', 'Un souci, une question, un truc à savoir : mets-le dans le commentaire'], ['🙋', 'Coincée avant d\'avoir fini ? « Je bloque », tu expliques pourquoi, Alex reçoit une alerte immédiate et te répond en haut de ta page'], ['↩️', 'Cochée par erreur ? Appuie à nouveau sur le rond pour annuler']] },
+  { ico: '🌙', title: 'Chaque jour : ton EOD avant 17h', txt: `Onglet <b>Mon EOD</b>, <b>avant 17h</b>, quand tu termines. Tu dis comment tu t'es sentie, ton énergie, ce qui a bien marché, ce qui a coincé. Tes missions du jour sont ajoutées automatiquement.`,
+    list: [['📲', 'Alex reçoit ton EOD directement sur Telegram'], ['⚠️', 'Les difficultés et les besoins, c\'est la partie la plus utile : ne la saute pas'], ['📧', 'Pas rempli à 16h55 ? Tu reçois un petit mail de rappel'], ['✏️', 'Envoyé trop tôt ? Tu peux le modifier jusqu\'à minuit']] },
+  { ico: '📋', title: "L'EOD de Lauric, tous les jours", txt: `Chaque matin du lundi au vendredi, une mission <b>« Remplir l'EOD de Lauric »</b> apparaît automatiquement dans ta liste, avec le lien. Tu la traites comme les autres.`,
+    list: [['1️⃣', 'Ouvrir le lien de la mission'], ['2️⃣', 'Remplir l\'EOD dans la console de Lauric'], ['3️⃣', 'Revenir ici et cocher la mission (10 min prévues)'], ['🚀', 'Le bloc « EOD de Lauric » de ton EOD se coche alors tout seul']] },
   { ico: '📝', title: "Les messages d'Alex", txt: `Quand Alex a une idée, une consigne ou un rappel qui n'est pas une mission, il apparaît <b>en haut de ta page</b> dans un cadre violet. Tu lis, tu appuies sur <b>« Vu »</b>, il sait que c'est passé.`,
     list: [['📱', 'Ajoute la console à ton écran d\'accueil : sur iPhone, Partager → « Sur l\'écran d\'accueil »'], ['🔄', 'La page se met à jour toute seule, pas besoin de recharger'], ['❓', 'Le bouton « Guide » en haut te réaffiche ce tutoriel quand tu veux']] },
 ];
