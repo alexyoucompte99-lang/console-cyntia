@@ -18,6 +18,17 @@
 //   tg_test        {}                              message de test
 //   state          {}
 
+// À exécuter une fois dans l'éditeur pour accorder les autorisations (Sheets, Drive, réseau, déclencheurs)
+function autoriser() {
+  const ss = book();
+  tab(ss, MIS_TAB, MIS_HDR);
+  tab(ss, EOD_TAB, EOD_HDR);
+  UrlFetchApp.fetch('https://api.telegram.org/');
+  ScriptApp.getProjectTriggers();
+  MailApp.getRemainingDailyQuota();
+  Logger.log('OK ' + ss.getUrl());
+}
+
 const KEY = 'cyntia-ce6892b5a42b55849eb4460d';
 const P = PropertiesService.getScriptProperties();
 const MIS_TAB = 'Missions';
@@ -63,6 +74,7 @@ function doPost(e) {
     if (p.what === 'note_seen') return out(noteSeen(p));
     if (p.what === 'note_delete') return out(noteDelete(p));
     if (p.what === 'tg_test') return out({ ok: sendTg('🧭 Console Cyntia : test de notification OK') });
+    if (p.what === 'mail_test') { MailApp.sendEmail({ to: String(p.to || CYNTIA_EMAIL), name: 'Console Cyntia', subject: 'Test console Cyntia', body: 'Le rappel mail fonctionne. ' + PAGE_URL }); return out({ ok: true, quota: MailApp.getRemainingDailyQuota() }); }
     return out({ ok: false, error: 'unknown what' });
   } catch (err) {
     return out({ ok: false, error: String(err && err.message || err) });
@@ -385,15 +397,4 @@ function sendTg(text) {
 
 function out(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
-}
-
-// À exécuter une fois dans l'éditeur pour accorder les autorisations (Sheets, Drive, réseau, déclencheurs)
-function autoriser() {
-  const ss = book();
-  tab(ss, MIS_TAB, MIS_HDR);
-  tab(ss, EOD_TAB, EOD_HDR);
-  UrlFetchApp.fetch('https://api.telegram.org/');
-  ScriptApp.getProjectTriggers();
-  MailApp.getRemainingDailyQuota();
-  Logger.log('OK ' + ss.getUrl());
 }
