@@ -183,6 +183,18 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .plan div{background:rgba(255,255,255,.18);border-radius:12px;padding:8px 10px}
 .plan b{display:block;font-size:18px;line-height:1.1}
 .plan span{font-size:12px;opacity:.92}
+.guide-btn{padding:6px 10px;border-radius:999px;background:var(--lav-soft);color:var(--lav);font-weight:800;font-size:12.5px}
+.g-ico{font-size:44px;text-align:center;margin:6px 0 2px}
+.g-title{font-size:20px;font-weight:800;text-align:center;margin:0 0 6px}
+.g-txt{font-size:14.5px;color:var(--ink);text-align:center;margin:0 auto;max-width:440px}
+.g-txt b{color:var(--sage)}
+.g-list{margin:12px auto 0;max-width:440px;padding:0;list-style:none;font-size:14px}
+.g-list li{display:flex;gap:10px;padding:7px 10px;border-radius:10px;background:#FCFAF6;margin-top:6px;align-items:flex-start}
+.g-list li span:first-child{flex:none;width:22px;text-align:center}
+.g-dots{display:flex;gap:6px;justify-content:center;margin:14px 0 4px}
+.g-dots i{width:8px;height:8px;border-radius:50%;background:#E3DCCF}
+.g-dots i.on{background:var(--sage);width:22px;border-radius:4px}
+@media(max-width:520px){.gl{display:none}.guide-btn{width:30px;height:30px;padding:0;display:grid;place-items:center}h1{font-size:17px}.brand{gap:8px}.logo{width:36px;height:36px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -194,7 +206,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
       <div><h1>Console Cyntia</h1><div class="sub" id="sub">missions · EOD · suivi</div></div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <div class="role"><button id="r-cyntia" onclick="setRole('cyntia')">Cyntia</button><button id="r-alex" onclick="setRole('alex')">Alex</button></div>
+      <div style="display:flex;gap:6px;align-items:center"><button class="guide-btn" title="Revoir le guide" onclick="openGuide(0)">?<span class="gl"> Guide</span></button><div class="role"><button id="r-cyntia" onclick="setRole('cyntia')">Cyntia</button><button id="r-alex" onclick="setRole('alex')">Alex</button></div></div>
       <div class="status" id="status"><span class="dot"></span><span id="status-t">chargement…</span></div>
     </div>
   </header>
@@ -650,6 +662,37 @@ function vData() {
   <div class="card"><h2>Détail des missions</h2><div class="tablewrap"><table><thead><tr><th>Mission</th><th class="num">Estimé</th><th class="num">Réel</th><th class="num">Écart</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="hint">Aucune mission faite.</td></tr>'}</tbody></table></div></div>`;
 }
 
+// ---------- guide de bienvenue (onboarding Cyntia) ----------
+const GUIDE = [
+  { ico: '👋', title: 'Bienvenue Cyntia !', txt: `Cette console, c'est <b>ton tableau de bord</b> avec Alex. Tout ce qu'il te confie arrive ici, et tout ce que tu fais y est noté. Plus besoin de chercher dans WhatsApp ce qu'il fallait faire.`,
+    list: [['📋', 'Tes missions, avec la deadline et le temps prévu'], ['✅', 'Tu coches quand c\'est fait et tu notes le temps réel'], ['🌙', 'Chaque soir, ton EOD en 1 minute'], ['📝', 'Les messages et idées d\'Alex, au même endroit']] },
+  { ico: '📋', title: 'Tes missions', txt: `Elles sont rangées par échéance : <b>En retard</b>, <b>Aujourd'hui</b>, <b>Demain</b>, <b>Cette semaine</b>… Sur chaque mission tu vois la date limite, le temps qu'Alex a prévu, un lien s'il y en a un, et la priorité.`,
+    list: [['🔥', '« Urgente » = à faire en premier'], ['🔗', '« Ouvrir le lien » = doc, vidéo ou page qui explique la mission'], ['🌿', '« Quand tu peux » = pas d\'urgence, quand tu as un creux']] },
+  { ico: '✅', title: 'Quand tu as fini', txt: `Tu appuies sur le <b>rond à gauche</b> de la mission. On te demande <b>combien de temps ça t'a pris</b> et si tu veux laisser un commentaire à Alex.`,
+    list: [['⏱', 'Sois honnête sur le temps : ça sert à Alex pour mieux estimer, jamais pour te juger'], ['💬', 'Un souci, une question, un truc à savoir : mets-le dans le commentaire'], ['↩️', 'Cochée par erreur ? Appuie à nouveau sur le rond pour annuler']] },
+  { ico: '🌙', title: 'Chaque soir : ton EOD', txt: `Onglet <b>Mon EOD</b>, avant 21h. Tu dis comment tu t'es sentie, ton énergie, ce qui a bien marché, ce qui a coincé. Tes missions du jour sont ajoutées automatiquement.`,
+    list: [['📲', 'Alex reçoit ton EOD directement sur Telegram'], ['⚠️', 'Les difficultés et les besoins, c\'est la partie la plus utile : ne la saute pas'], ['✏️', 'Envoyé trop tôt ? Tu peux le modifier jusqu\'à minuit']] },
+  { ico: '📋', title: "L'EOD de Lauric, tous les jours", txt: `Dans l'onglet Mon EOD, il y a un bloc violet <b>« EOD de Lauric »</b>. Chaque jour : tu appuies sur <b>Ouvrir</b>, tu remplis l'EOD dans la console de Lauric, puis tu reviens cocher <b>« C'est fait »</b>.`,
+    list: [['1️⃣', 'Ouvrir ↗'], ['2️⃣', 'Remplir l\'EOD chez Lauric'], ['3️⃣', 'Revenir ici et cocher « C\'est fait »'], ['🚀', 'Puis envoyer ton propre EOD']] },
+  { ico: '📝', title: "Les messages d'Alex", txt: `Quand Alex a une idée, une consigne ou un rappel qui n'est pas une mission, il apparaît <b>en haut de ta page</b> dans un cadre violet. Tu lis, tu appuies sur <b>« Vu »</b>, il sait que c'est passé.`,
+    list: [['📱', 'Ajoute la console à ton écran d\'accueil : sur iPhone, Partager → « Sur l\'écran d\'accueil »'], ['🔄', 'La page se met à jour toute seule, pas besoin de recharger'], ['❓', 'Le bouton « Guide » en haut te réaffiche ce tutoriel quand tu veux']] },
+];
+function openGuide(i) {
+  const g = GUIDE[i]; const last = i === GUIDE.length - 1;
+  openModal(`<div class="g-ico">${g.ico}</div><h3 class="g-title">${g.title}</h3><p class="g-txt">${g.txt}</p>
+    <ul class="g-list">${g.list.map(([a, b]) => `<li><span>${a}</span><span>${b}</span></li>`).join('')}</ul>
+    <div class="g-dots">${GUIDE.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="row"><button class="btn ghost" onclick="${i === 0 ? 'endGuide()' : `openGuide(${i - 1})`}">${i === 0 ? 'Passer' : '← Retour'}</button>
+    <button class="btn ${last ? 'coral' : ''}" onclick="${last ? 'endGuide()' : `openGuide(${i + 1})`}">${last ? "C'est parti ! 🚀" : 'Suivant →'}</button></div>`);
+  $('#sheet').scrollTop = 0;
+}
+function endGuide() { try { localStorage.setItem('cc_onboarded', '1'); } catch (_) { } closeModal(); }
+function maybeGuide() {
+  const q = new URLSearchParams(location.search);
+  let seen = false; try { seen = localStorage.getItem('cc_onboarded') === '1'; } catch (_) { }
+  if (q.get('guide') === '1' || (role === 'cyntia' && !seen)) setTimeout(() => openGuide(0), 400);
+}
+
 // ---------- modal ----------
 function openModal(html) { $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
 function closeModal() { $('#modal').classList.remove('on'); }
@@ -661,7 +704,7 @@ if (new URLSearchParams(location.search).get('vue') === 'alex') role = 'alex';
 addEventListener('hashchange', () => { const t = (location.hash || '').replace('#', ''); if (t && t !== tab) { tab = t; render(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
 setInterval(() => { if (!document.hidden) load(true); }, 120000);
-render(); load();
+render(); load(); maybeGuide();
 </script>
 </body>
 </html>
