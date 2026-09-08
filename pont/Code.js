@@ -41,6 +41,7 @@ const LAURIC_EOD = 'https://alexyoucompte99-lang.github.io/console-prospection-l
 // Missions récurrentes créées automatiquement le matin (days : 1 = lundi … 7 = dimanche)
 const RECURRING = [
   { title: "Remplir l'EOD de Lauric", details: "Ouvre la console de Lauric, remplis l'EOD du jour, puis coche cette mission.", link: LAURIC_EOD, est_min: 10, priority: 'normale', days: [1, 2, 3, 4, 5] },
+  { title: "Relever les nouvelles étiquettes Insta (48 h)", details: "Sur le téléphone (le drapeau et les étiquettes ne se voient pas sur ordinateur) : ouvre la messagerie pro Insta de Lauric, passe en revue les conversations des dernières 48 h et repère celles qui ont reçu une nouvelle étiquette ou un drapeau (posé par toi, Constant ou Lauric). Pour chacune, copie l'URL du profil et colle-la dans le champ « URL des personnes mises en étiquette » de l'EOD Lauric du jour (une URL par ligne). Ne remets pas une URL déjà envoyée un jour précédent. Si aucune nouvelle étiquette : mets 0 dans « Étiquette drapeau » et coche quand même la mission.", link: LAURIC_EOD, est_min: 10, priority: 'normale', days: [1, 2, 3, 4, 5] },
 ];
 const EOD_HDR = ['Date', 'Humeur /5', 'Énergie /5', 'Ce qui a bien marché', 'Difficultés / besoins', 'EOD Lauric fait', 'Missions faites', 'Temps total (min)', 'Envoyé le'];
 const EOD_KEYS = ['date', 'mood', 'energy', 'good', 'hard', 'lauric_done', 'missions_done', 'total_min', 'sent_at'];
