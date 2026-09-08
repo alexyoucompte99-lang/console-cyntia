@@ -63,7 +63,7 @@ function doPost(e) {
   try {
     if (p.what === 'setup') return out(setup(p));
     if (p.what === 'state') return out(state());
-    if (p.what === 'mission_add') return out(missionAdd(p));
+    if (p.what === 'mission_add') return out(missionAdd(p, true));
     if (p.what === 'mission_update') return out(missionUpdate(p));
     if (p.what === 'mission_delete') return out(missionDelete(p));
     if (p.what === 'eod_submit') return out(eodSubmit(p));
@@ -189,7 +189,8 @@ function state() {
 // ---------- missions ----------
 function stamp() { return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd'T'HH:mm:ss"); }
 
-function missionAdd(p) {
+// mail : true quand la mission est ajoutée par Alex depuis la console (pas pour les récurrentes)
+function missionAdd(p, mail) {
   const ss = book();
   const sh = tab(ss, MIS_TAB, MIS_HDR);
   const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -198,7 +199,24 @@ function missionAdd(p) {
     String(p.deadline || ''), Number(p.est_min) || '', String(p.priority || 'normale'), 'todo', '', '', '', now, '', ''];
   sh.appendRow(row);
   sh.getRange(sh.getLastRow(), 1, 1, row.length).setNumberFormat('@');
+  if (mail) { try { mailNewMission(row); } catch (e) { Logger.log('mail mission : ' + e); } }
   return { ok: true, id };
+}
+
+// Mail à Cyntia dès qu'Alex ajoute une mission dans sa console
+function mailNewMission(row) {
+  const title = row[2], details = row[3], link = row[4], deadline = row[5], est = row[6], prio = row[7];
+  let dl = 'aucune';
+  if (deadline) dl = Utilities.formatDate(new Date(deadline + 'T12:00:00'), TZ, 'EEEE d MMMM');
+  const estTxt = est ? (est >= 60 ? Math.floor(est / 60) + ' h' + (est % 60 ? ' ' + (est % 60) + ' min' : '') : est + ' min') : 'non précisé';
+  let body = 'Hello Cyntia,\n\nUne nouvelle mission vient d\'être ajoutée dans ta console' + (prio === 'urgente' ? ' (urgente)' : '') + ' :\n\n'
+    + '▶ ' + title + '\n'
+    + '📅 Deadline : ' + dl + '\n'
+    + '⏱ Temps prévu : ' + estTxt + '\n'
+    + (link ? '🔗 Lien : ' + link + '\n' : '');
+  if (details) body += '\n' + details + '\n';
+  body += '\nTa console : ' + PAGE_URL + '\n\nAlex\n\n(message automatique de la console)';
+  MailApp.sendEmail({ to: CYNTIA_EMAIL, name: 'Console Cyntia', subject: 'Nouvelle mission : ' + title, body: body });
 }
 
 function findRow(sh, id) {
