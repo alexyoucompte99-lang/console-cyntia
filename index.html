@@ -60,6 +60,7 @@ h1{font-size:19px;margin:0;font-weight:800}
 .mtitle{font-weight:700;font-size:15px}
 .mission.done .mtitle{color:var(--muted);text-decoration:line-through}
 .mdet{color:var(--muted);font-size:13.5px;margin-top:3px;white-space:pre-wrap}
+.mdet a{color:inherit;text-decoration:underline;word-break:break-all}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#F3EFE7;color:var(--muted)}
 .chip.late{background:var(--coral-soft);color:#C2412A}
@@ -246,6 +247,7 @@ const TABS = {
 
 // ---------- utils ----------
 const $ = s => document.querySelector(s);
+const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad = n => String(n).padStart(2, '0');
 function isoDate(d = new Date()) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -372,7 +374,7 @@ function missionRow(m, forAlex) {
     : (!done && !forAlex ? `<button class="blockbtn" onclick="openBlock('${m.id}')">🙋 Je bloque</button>` : '');
   return `<div class="mission ${done ? 'done' : ''} ${!done && m.blocked ? 'blocked' : ''}">
     <button class="chk" onclick="${done ? `undoDone('${m.id}')` : `openDone('${m.id}')`}" title="${done ? 'Annuler' : 'Marquer comme faite'}">${done ? '✓' : ''}</button>
-    <div class="mbody"><div class="mtitle">${esc(m.title)} ${prioChip(m.priority)}</div>${m.details ? `<div class="mdet">${esc(m.details)}</div>` : ''}
+    <div class="mbody"><div class="mtitle">${esc(m.title)} ${prioChip(m.priority)}</div>${m.details ? `<div class="mdet">${linkify(m.details)}</div>` : ''}
       <div class="meta"><span class="dl ${dl.cls}">📅 ${dl.txt}</span>${m.est_min ? `<span>⏱ Temps prévu : ${fmtMin(m.est_min)}</span>` : ''}${done && m.actual_min ? `<span style="color:var(--sage)">✔ Fait en ${fmtMin(m.actual_min)}${m.est_min ? (m.actual_min > m.est_min ? ` (+${m.actual_min - m.est_min} min)` : m.actual_min < m.est_min ? ` (−${m.est_min - m.actual_min} min)` : ' (pile)') : ''}</span>` : ''}${forAlex && m.created ? `<span>Ajoutée ${when(m.created)}</span>` : ''}</div>
       ${m.link ? `<a class="linkbtn" href="${esc(m.link)}" target="_blank" rel="noopener">🔗 Ouvrir le lien de la mission</a>` : ''}${!done && !m.blocked && !forAlex ? '' : ''}
       ${blockHtml}
